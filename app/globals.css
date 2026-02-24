@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* ==========================
+   Global Theme Variables
+========================== */
+:root {
+  --primary: #b100ff;
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+  --radius: 12px;
+}
+
+/* Light mode */
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: #ffffff;
+    --foreground: #1a1a1a;
+  }
+}
+
+/* ==========================
+   Global Reset + Typography
+========================== */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Poppins", sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 700;
+}
+
+button,
+a {
+  transition: 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.btn-outline {
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  padding: 10px 22px;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.section {
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+
+/* hide native scrollbar for cleaner look */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.input {
+  @apply w-full border rounded-lg px-3 py-2;
+}

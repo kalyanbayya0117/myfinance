@@ -1,0 +1,110 @@
+import { z } from "zod";
+import mongoose from "mongoose";
+import { connectDB } from "@/lib/mongodb";
+import { Payment } from "@/models/Payment";
+import { Loan } from "@/models/Loan";
+import { ApiError, handleApiError, noStoreJson } from "@/lib/errors";
+import { requireAuth } from "@/lib/auth";
+import { enforceRateLimit, getRequestIp } from "@/lib/rate-limit";
+
+const paymentSchema = z.object({
+  loanId: z.string().min(1),
+  amount: z.coerce.number().positive(),
+});
+
+function hasDueDatePassed(endDate: string) {
+  const dueDate = new Date(endDate);
+  if (Number.isNaN(dueDate.getTime())) return false;
+
+  dueDate.setHours(23, 59, 59, 999);
+  return Date.now() > dueDate.getTime();
+}
+
+export async function POST(req: Request) {
+  try {
+    const auth = await requireAuth(req);
+    const ip = getRequestIp(req);
+
+    const limiter = enforceRateLimit(`payments:create:${auth.userId}:${ip}`, {
+      limit: 80,
+      windowMs: 60 * 1000,
+    });
+
+    if (!limiter.allowed) {
+      throw new ApiError(`Too many requests. Try again in ${limiter.retryAfterSec}s`, 429);
+    }
+
+    await connectDB();
+
+    const body = await req.json();
+    const parsed = paymentSchema.safeParse({
+      loanId: String(body?.loanId ?? "").trim(),
+      amount: body?.amount,
+    });
+
+    if (!parsed.success) {
+      throw new ApiError("Invalid payment details", 400);
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(parsed.data.loanId)) {
+      throw new ApiError("Invalid loan id", 400);
+    }
+
+    const loan = await Loan.findOne({ _id: parsed.data.loanId, userId: auth.userId }).lean();
+    if (!loan) {
+      throw new ApiError("Loan not found", 404);
+    }
+
+    const totals = await Payment.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(auth.userId),
+          loanId: new mongoose.Types.ObjectId(parsed.data.loanId),
+        },
+      },
+      {
+        $group: {
+          _id: "$loanId",
+          totalPaid: { $sum: "$amount" },
+        },
+      },
+    ]);
+
+    const paidBefore = Number(totals[0]?.totalPaid ?? 0);
+    const remainingBefore = Math.max((Number(loan.principal) || 0) - paidBefore, 0);
+
+    const effectiveStatus =
+      remainingBefore === 0 || loan.status === "closed"
+        ? "closed"
+        : hasDueDatePassed(loan.endDate)
+          ? "overdue"
+          : "active";
+
+    if (effectiveStatus === "closed") {
+      throw new ApiError("This loan is already closed", 400);
+    }
+
+    const payment = await Payment.create({
+      userId: auth.userId,
+      loanId: parsed.data.loanId,
+      amount: parsed.data.amount,
+    });
+
+    const totalPaid = paidBefore + parsed.data.amount;
+    const remainingAmount = Math.max((Number(loan.principal) || 0) - totalPaid, 0);
+
+    const loanClosed = remainingAmount === 0 && loan.status !== "closed";
+    if (loanClosed) {
+      await Loan.findByIdAndUpdate(parsed.data.loanId, { status: "closed" });
+    }
+
+    return noStoreJson({
+      payment,
+      loanClosed,
+      clientName: loan.clientName ?? "",
+      remainingAmount,
+    });
+  } catch (error) {
+    return handleApiError(error, "payments:create");
+  }
+}
