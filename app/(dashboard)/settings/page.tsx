@@ -28,6 +28,10 @@ export default function Settings() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [users, setUsers] = useState<AppUser[]>([]);
 
+  const [profileName, setProfileName] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -89,6 +93,51 @@ export default function Settings() {
 
     load();
   }, []);
+
+  useEffect(() => {
+    setProfileName(user?.name || "");
+    setProfileEmail(user?.email || "");
+  }, [user]);
+
+  const handleUpdateProfile = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!profileName.trim() || !profileEmail.trim()) {
+      toast.error("Name and email are required");
+      return;
+    }
+
+    setUpdatingProfile(true);
+    try {
+      const res = await fetch("/api/auth/me", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: profileName.trim(),
+          email: profileEmail.trim(),
+        }),
+      });
+
+      const payload = (await res.json().catch(() => null)) as
+        | { message?: string; user?: CurrentUser }
+        | null;
+
+      if (!res.ok) {
+        toast.error(payload?.message || "Failed to update profile");
+        return;
+      }
+
+      if (payload?.user) {
+        setUser(payload.user);
+      }
+      toast.success(payload?.message || "Profile updated successfully");
+      router.refresh();
+    } finally {
+      setUpdatingProfile(false);
+    }
+  };
 
   const handleChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -232,20 +281,56 @@ export default function Settings() {
         <button
           type="button"
           onClick={() => setLogoutConfirmOpen(true)}
-          className="rounded-lg border border-black/10 px-3 py-2 text-sm font-semibold hover:bg-gray-50 cursor-pointer"
+          disabled={loggingOut}
+          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60 transition-colors cursor-pointer"
         >
           Logout
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
-        <p className="text-sm text-gray-500">Logged in as</p>
-        <p className="font-semibold">{user?.name || "-"}</p>
-        <p className="text-sm text-gray-600">{user?.email || "-"}</p>
-        <p className="text-xs uppercase tracking-wide text-[var(--primary)] font-semibold">
-          {user?.role || "-"}
-        </p>
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Profile Section</p>
+
+        <div className="mt-3 flex items-start gap-3">
+          <div className="h-11 w-11 shrink-0 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] inline-flex items-center justify-center text-sm font-bold">
+            {(user?.name || "U").trim().charAt(0).toUpperCase()}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-bold text-black break-words">{user?.name || "-"}</p>
+            <p className="mt-0.5 text-sm text-gray-600 break-all">{user?.email || "-"}</p>
+
+            {/* <span className="mt-2 inline-flex rounded-full bg-[var(--primary)]/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">
+              {user?.role || "-"}
+            </span> */}
+          </div>
+        </div>
       </div>
+
+      <form onSubmit={handleUpdateProfile} className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+        <h3 className="font-semibold">Edit My Profile</h3>
+        <input
+          type="text"
+          placeholder="Full name"
+          value={profileName}
+          onChange={(event) => setProfileName(event.target.value)}
+          className="input"
+        />
+        <input
+          type="email"
+          placeholder="Email address"
+          value={profileEmail}
+          onChange={(event) => setProfileEmail(event.target.value)}
+          className="input"
+        />
+        <button
+          type="submit"
+          disabled={updatingProfile}
+          className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg disabled:opacity-60"
+        >
+          {updatingProfile ? "Saving..." : "Save Profile"}
+        </button>
+      </form>
 
       <form onSubmit={handleChangePassword} className="bg-white rounded-xl shadow-sm p-4 space-y-3">
         <h3 className="font-semibold">Change My Password</h3>
@@ -292,7 +377,7 @@ export default function Settings() {
         </button>
       </form>
 
-      {user?.role === "owner" ? (
+      {/* {user?.role === "owner" ? (
         <>
           <form onSubmit={handleCreateUser} className="bg-white rounded-xl shadow-sm p-4 space-y-3">
             <h3 className="font-semibold">Add Application User</h3>
@@ -431,7 +516,7 @@ export default function Settings() {
             </div>
           </div>
         </>
-      ) : null}
+      ) : null} */}
     </section>
   );
 }

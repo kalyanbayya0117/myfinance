@@ -24,15 +24,24 @@ export default async function Page() {
   const activeLoans = loans.filter((loan) => loan.status === "active").length;
   const closedLoans = loans.filter((loan) => loan.status === "closed").length;
   const totalCollected = loans.reduce((sum, loan) => sum + (Number(loan.totalPaid) || 0), 0);
+  const totalInterestCollected = loans.reduce((sum, loan) => {
+    const principal = Number(loan.principal) || 0;
+    const totalPaid = Number(loan.totalPaid) || 0;
+    return sum + Math.max(totalPaid - principal, 0);
+  }, 0);
   const recentLoans = loans.slice(0, 5);
 
   return (
     <section>
       <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Total Lent" value={formatCurrency(totalLent)} />
         <StatCard label="Total Collected" value={formatCurrency(totalCollected)} />
+        <StatCard
+          label="Total Interest Collected"
+          value={formatCurrency(totalInterestCollected)}
+        />
         <StatCard label="Active Loans" value={activeLoans} />
         <StatCard label="Closed Loans" value={closedLoans} />
       </div>

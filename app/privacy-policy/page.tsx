@@ -10,6 +10,12 @@ export default function PrivacyPolicyPage() {
   return (
     <main className="min-h-screen bg-white px-6 py-10 sm:px-10">
       <div className="mx-auto max-w-4xl">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 text-lg font-extrabold text-[var(--primary)] mb-10 border-b border-black/10 pb-4 w-full"
+        >
+          My<span className="text-black">Finance</span>
+        </Link>
         <h1 className="text-3xl font-extrabold text-black sm:text-4xl">Privacy Policy</h1>
         <p className="mt-3 text-sm text-gray-500">Last updated: February 23, 2026</p>
 

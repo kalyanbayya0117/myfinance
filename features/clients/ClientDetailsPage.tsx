@@ -111,8 +111,19 @@ export default function ClientDetailsPage({ id }: { id: string }) {
         title="Delete this loan?"
         description={
           loanToDelete
-            ? `Loan amount: ₹${loanToDelete.principal.toLocaleString()}`
-            : "This action cannot be undone."
+            ? (
+                <div className="space-y-1">
+                  <p>
+                    <span className="font-semibold text-gray-700">Loan ID:</span>{" "}
+                    {loanToDelete.loanId || "-"}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-gray-700">Client:</span>{" "}
+                    {data.client.name || "-"}
+                  </p>
+                </div>
+              )
+            : "Please confirm loan deletion."
         }
         confirmLabel="Delete Loan"
         onConfirm={handleDeleteLoan}

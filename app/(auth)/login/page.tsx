@@ -51,38 +51,8 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen grid lg:grid-cols-[1.1fr_0.9fr] bg-white">
-      <section className="relative hidden lg:flex flex-col justify-between p-12 bg-[radial-gradient(circle_at_top,_#f5e9ff,_#ffffff_55%)]">
-        <div className="flex items-center gap-2 text-lg font-extrabold text-[var(--primary)]">
-          My<span className="text-black">Finance</span>
-        </div>
-
-        <div className="max-w-lg">
-          <h1 className="text-4xl font-extrabold leading-tight text-black">
-            Welcome back to your finance dashboard.
-          </h1>
-          <p className="mt-4 text-base text-gray-600">
-            Track loans, manage clients, and see your collections in one place.
-          </p>
-
-          <div className="mt-8 grid gap-4">
-            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-sm text-gray-500">Today</p>
-              <p className="mt-2 text-2xl font-bold">₹2,10,000</p>
-              <p className="text-sm text-gray-500">Collected this month</p>
-            </div>
-            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-sm text-gray-500">Active loans</p>
-              <p className="mt-2 text-2xl font-bold">48</p>
-              <p className="text-sm text-gray-500">Across 132 clients</p>
-            </div>
-          </div>
-        </div>
-
-        <p className="text-xs text-gray-500">Secure access for staff only.</p>
-      </section>
-
-      <section className="flex items-center justify-center px-6 py-12">
+    <main className="min-h-screen bg-white">
+      <section className="flex min-h-screen items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           <div className="mb-8">
             <p className="text-sm font-semibold text-[var(--primary)]">
@@ -153,7 +123,21 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-8 text-xs text-gray-500">
-            By signing in, you agree to the data use and security policy.
+            By signing in, you agree to the{" "}
+            <Link
+              href="/terms-and-conditions"
+              className="font-semibold text-[var(--primary)] hover:underline"
+            >
+              Terms and Conditions
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/privacy-policy"
+              className="font-semibold text-[var(--primary)] hover:underline"
+            >
+              Privacy Policy
+            </Link>
+            .
           </p>
         </div>
       </section>

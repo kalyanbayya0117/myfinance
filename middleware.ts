@@ -7,8 +7,9 @@ const AUTH_COOKIE_NAME = "myfinance_auth";
 const publicRoutes = new Set([
   "/login",
   "/forgot-password",
-  "/contact-admin",
   "/reset-password",
+  "/terms-and-conditions",
+  "/privacy-policy",
 ]);
 
 const publicApiRoutes = new Set([

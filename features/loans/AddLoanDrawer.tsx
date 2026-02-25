@@ -29,6 +29,7 @@ export default function AddLoanDrawer({
   const [forceNewClient, setForceNewClient] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isClientInputFocused, setIsClientInputFocused] = useState(false);
 
   const {
     register,
@@ -41,8 +42,13 @@ export default function AddLoanDrawer({
     resolver: zodResolver(loanSchema),
   });
 
+  const clientNameField = register("clientName");
   const clientInput = watch("clientName") ?? "";
-  const showSuggestionPanel = open && clientInput.trim().length > 0 && (!selectedClient || clientInput.trim() !== selectedClient.name);
+  const showSuggestionPanel =
+    open &&
+    isClientInputFocused &&
+    clientInput.trim().length > 0 &&
+    (!selectedClient || clientInput.trim() !== selectedClient.name);
 
   useEffect(() => {
     if (!open) return;
@@ -213,10 +219,15 @@ export default function AddLoanDrawer({
             </label>
             <div className="relative">
               <input
-                {...register("clientName")}
+                {...clientNameField}
                 placeholder="Client Name or Phone"
                 className="input"
                 autoComplete="off"
+                onFocus={() => setIsClientInputFocused(true)}
+                onBlur={(event) => {
+                  clientNameField.onBlur(event);
+                  setTimeout(() => setIsClientInputFocused(false), 120);
+                }}
               />
 
               {showSuggestionPanel ? (
@@ -228,6 +239,7 @@ export default function AddLoanDrawer({
                       <button
                         key={client._id}
                         type="button"
+                        onMouseDown={(event) => event.preventDefault()}
                         onClick={() => selectClient(client)}
                         className="w-full px-3 py-2 text-left hover:bg-gray-50"
                       >
@@ -241,6 +253,7 @@ export default function AddLoanDrawer({
 
                   <button
                     type="button"
+                    onMouseDown={(event) => event.preventDefault()}
                     onClick={chooseNewClient}
                     className="w-full border-t border-black/10 px-3 py-2 text-left text-sm font-semibold text-[var(--primary)] hover:bg-gray-50"
                   >
@@ -307,6 +320,9 @@ export default function AddLoanDrawer({
               <input
                 {...register("interestRate")}
                 type="number"
+                step="any"
+                min="0"
+                inputMode="decimal"
                 placeholder="Interest %"
                 className="input"
               />

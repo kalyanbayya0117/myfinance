@@ -102,7 +102,11 @@ export default function ClientsPage({
       <ConfirmDialog
         open={Boolean(clientToDelete)}
         title="Delete this client?"
-        description={clientToDelete ? `Client: ${clientToDelete.name}` : "This action cannot be undone."}
+        description={
+          clientToDelete
+            ? `Client: ${clientToDelete.name}`
+            : "Please confirm client deletion."
+        }
         confirmLabel="Delete Client"
         onConfirm={handleDelete}
         onCancel={() => {

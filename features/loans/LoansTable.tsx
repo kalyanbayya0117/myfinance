@@ -125,8 +125,19 @@ export default function LoansTable({
         title="Delete this loan?"
         description={
           loanToDelete
-            ? `Client: ${loanToDelete.clientName}`
-            : "This action cannot be undone."
+            ? (
+                <div className="space-y-1">
+                  <p>
+                    <span className="font-semibold text-gray-700">Loan ID:</span>{" "}
+                    {loanToDelete.loanId || "-"}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-gray-700">Client:</span>{" "}
+                    {loanToDelete.clientName || "-"}
+                  </p>
+                </div>
+              )
+            : "Please confirm loan deletion."
         }
         confirmLabel="Delete Loan"
         onConfirm={handleDelete}
