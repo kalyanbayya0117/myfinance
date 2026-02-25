@@ -25,13 +25,19 @@ export async function POST(req: Request) {
       throw new ApiError("Invalid email", 400);
     }
 
-    const limiter = enforceRateLimit(`forgot-password:${ip}:${parsed.data.email}`, {
-      limit: 5,
-      windowMs: 15 * 60 * 1000,
-    });
+    const limiter = enforceRateLimit(
+      `forgot-password:${ip}:${parsed.data.email}`,
+      {
+        limit: 5,
+        windowMs: 15 * 60 * 1000,
+      },
+    );
 
     if (!limiter.allowed) {
-      throw new ApiError(`Too many requests. Try again in ${limiter.retryAfterSec}s`, 429);
+      throw new ApiError(
+        `Too many requests. Try again in ${limiter.retryAfterSec}s`,
+        429,
+      );
     }
 
     await connectDB();
@@ -50,7 +56,7 @@ export async function POST(req: Request) {
       user.resetPasswordExpiresAt = expiresAt;
       await user.save();
 
-      const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
+      const origin = process.env.NEXT_PUBLIC_APP_URL;
       const resetUrl = `${origin}/reset-password?token=${rawToken}`;
 
       await sendPasswordResetEmail({
@@ -68,7 +74,8 @@ export async function POST(req: Request) {
     }
 
     return noStoreJson({
-      message: "If an account exists with this email, a reset link has been sent.",
+      message:
+        "If an account exists with this email, a reset link has been sent.",
     });
   } catch (error) {
     return handleApiError(error, "forgot-password");
