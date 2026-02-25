@@ -34,6 +34,7 @@ export default function AddClientDrawer({
 }: Props) {
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof ClientForm, string>>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -45,17 +46,41 @@ export default function AddClientDrawer({
         email: editingClient.email ?? "",
         address: editingClient.address ?? "",
       });
+      setErrors({});
       return;
     }
 
     setForm(emptyForm);
+    setErrors({});
   }, [open, editingClient]);
+
+  const validateForm = () => {
+    const nextErrors: Partial<Record<keyof ClientForm, string>> = {};
+
+    if (!form.name.trim()) {
+      nextErrors.name = "Client name is required";
+    }
+
+    if (!form.phone.trim()) {
+      nextErrors.phone = "Phone number is required";
+    }
+
+    if (form.email.trim()) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(form.email.trim())) {
+        nextErrors.email = "Enter a valid email address";
+      }
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!form.name.trim() || !form.phone.trim()) {
-      toast.error("Name and phone are required");
+    if (!validateForm()) {
+      toast.error("Please correct the highlighted fields");
       return;
     }
 
@@ -94,60 +119,113 @@ export default function AddClientDrawer({
 
   return (
     <div className={`fixed inset-0 z-40 ${open ? "visible" : "invisible"}`}>
-      <div onClick={onClose} className="absolute inset-0 bg-black/30" />
+      <div onClick={() => !submitting && onClose()} className="absolute inset-0 bg-black/30" />
 
-      <div className="absolute right-0 top-0 h-full w-[420px] bg-white shadow-xl p-6 overflow-y-auto">
-        <div className="flex justify-between mb-6">
-          <h3 className="font-bold text-lg">
-            {editingClient ? "Edit Client" : "Add Client"}
-          </h3>
-          <HiX onClick={onClose} className="cursor-pointer" />
+      <div className="absolute right-0 top-0 h-full w-full sm:w-[440px] bg-white shadow-xl flex flex-col">
+        <div className="flex items-start justify-between border-b border-black/10 p-5">
+          <div>
+            <h3 className="font-bold text-lg">
+              {editingClient ? "Edit Client" : "Add Client"}
+            </h3>
+            <p className="text-xs text-gray-500 mt-1">Add client details to create and manage loan records.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            className="rounded-lg p-2 hover:bg-gray-100 disabled:opacity-60 cursor-pointer"
+            aria-label="Close"
+          >
+            <HiX className="text-lg" />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            value={form.name}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, name: event.target.value }))
-            }
-            placeholder="Client Name"
-            className="input"
-          />
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Client Name
+            </label>
+            <input
+              value={form.name}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, name: event.target.value }))
+              }
+              placeholder="Client Name"
+              className="input"
+            />
+            {errors.name ? <p className="text-red-500 text-sm">{errors.name}</p> : null}
+          </div>
 
-          <input
-            value={form.phone}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, phone: event.target.value }))
-            }
-            placeholder="Phone"
-            className="input"
-          />
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Phone
+            </label>
+            <input
+              value={form.phone}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, phone: event.target.value }))
+              }
+              placeholder="Phone"
+              className="input"
+            />
+            {errors.phone ? <p className="text-red-500 text-sm">{errors.phone}</p> : null}
+          </div>
 
-          <input
-            value={form.email}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, email: event.target.value }))
-            }
-            placeholder="Email (optional)"
-            className="input"
-          />
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Email (Optional)
+            </label>
+            <input
+              value={form.email}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, email: event.target.value }))
+              }
+              placeholder="Email"
+              className="input"
+            />
+            {errors.email ? <p className="text-red-500 text-sm">{errors.email}</p> : null}
+          </div>
 
-          <input
-            value={form.address}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, address: event.target.value }))
-            }
-            placeholder="Address (optional)"
-            className="input"
-          />
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Address (Optional)
+            </label>
+            <textarea
+              value={form.address}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, address: event.target.value }))
+              }
+              placeholder="Address"
+              rows={3}
+              className="input resize-none"
+            />
+          </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full bg-[var(--primary)] text-white py-2 rounded-lg cursor-pointer disabled:opacity-60"
-          >
-            {editingClient ? "Update Client" : "Save Client"}
-          </button>
+          <div className="sticky bottom-0 bg-white pt-2">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={submitting}
+                className="w-1/2 border border-black/10 text-gray-700 py-2 rounded-lg cursor-pointer disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-1/2 bg-[var(--primary)] text-white py-2 rounded-lg cursor-pointer disabled:opacity-60"
+              >
+                {submitting
+                  ? editingClient
+                    ? "Updating..."
+                    : "Saving..."
+                  : editingClient
+                    ? "Update Client"
+                    : "Save Client"}
+              </button>
+            </div>
+          </div>
         </form>
       </div>
     </div>

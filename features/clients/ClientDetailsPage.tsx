@@ -15,7 +15,6 @@ import {
   HiMail,
   HiPhone,
   HiUser,
-  HiExclamationCircle,
   HiLocationMarker,
 } from "react-icons/hi";
 
@@ -40,8 +39,6 @@ export default function ClientDetailsPage({ id }: { id: string }) {
         return "bg-emerald-50 text-emerald-700 border border-emerald-200";
       case "closed":
         return "bg-blue-50 text-blue-700 border border-blue-200";
-      case "overdue":
-        return "bg-red-50 text-red-700 border border-red-200";
       default:
         return "bg-gray-100 text-gray-700 border border-gray-200";
     }
@@ -74,10 +71,6 @@ export default function ClientDetailsPage({ id }: { id: string }) {
   );
   const completedLoans = useMemo(
     () => loans.filter((loan) => loan.status === "closed"),
-    [loans],
-  );
-  const overdueLoans = useMemo(
-    () => loans.filter((loan) => loan.status === "overdue"),
     [loans],
   );
 
@@ -193,26 +186,7 @@ export default function ClientDetailsPage({ id }: { id: string }) {
           <p className="text-2xl font-bold mt-1">{completedLoans.length}</p>
         </div>
 
-        {overdueLoans.length > 0 ? (
-          <div className="bg-red-50 rounded-sm p-5 shadow-sm border border-red-100">
-            <p className="text-sm text-red-600 inline-flex items-center gap-1">
-              <HiExclamationCircle /> Overdue Loans
-            </p>
-            <p className="text-2xl font-bold mt-1 text-red-700">
-              {overdueLoans.length}
-            </p>
-          </div>
-        ) : null}
       </div>
-
-      {overdueLoans.length > 0 ? (
-        <div className="rounded-sm border border-red-200 bg-red-50 px-4 py-3">
-          <p className="text-sm font-semibold text-red-700">
-            {overdueLoans.length} overdue{" "}
-            {overdueLoans.length === 1 ? "loan" : "loans"} for this client.
-          </p>
-        </div>
-      ) : null}
 
       <div className="bg-white rounded-sm shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-black/10 flex items-center justify-between gap-3">
@@ -227,82 +201,156 @@ export default function ClientDetailsPage({ id }: { id: string }) {
             No loans found for this client.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
-              <thead className="bg-[var(--primary)] text-white uppercase text-xs">
-                <tr>
-                  <th className="p-4 text-left">Principal</th>
-                  <th className="p-4 text-left">Interest</th>
-                  <th className="p-4 text-left">Pledged</th>
-                  <th className="p-4 text-left">Duration</th>
-                  <th className="p-4 text-left">Status</th>
-                  <th className="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loans.map((loan) => (
-                  <tr
-                    key={loan._id}
-                    className="border-t hover:bg-gray-50 transition"
-                  >
-                    <td className="p-4 font-semibold">
-                      ₹{loan.principal.toLocaleString()}
-                    </td>
-                    <td className="p-4">{loan.interestRate}%</td>
-                    <td className="p-4 text-xs text-gray-600 max-w-[260px]">
-                      {loan.pledgedProperties?.length
-                        ? loan.pledgedProperties.join(", ")
-                        : "-"}
-                    </td>
-                    <td className="p-4 text-xs text-gray-600 whitespace-nowrap">
-                      {loan.startDate} → {loan.endDate}
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusStyle(
-                          loan.status,
-                        )}`}
-                      >
-                        {loan.status}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/loans/${loan._id}`)}
-                          className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
-                          title="View Loan"
-                        >
-                          <HiEye className="text-lg" />
-                        </button>
+          <div>
+            <div className="md:hidden divide-y divide-black/10">
+              {loans.map((loan) => (
+                <div key={loan._id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-semibold">₹{loan.principal.toLocaleString()}</p>
+                    <span
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusStyle(
+                        loan.status,
+                      )}`}
+                    >
+                      {loan.status}
+                    </span>
+                  </div>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingLoan(loan);
-                            setLoanDrawerOpen(true);
-                          }}
-                          className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
-                          title="Edit Loan"
-                        >
-                          <HiPencil className="text-lg" />
-                        </button>
+                  <div className="space-y-2 text-sm">
+                    <p>
+                      <span className="text-gray-500">Interest: </span>
+                      {loan.interestRate}%
+                    </p>
+                    <p className="text-gray-600">
+                      <span className="text-gray-500">Pledged: </span>
+                      {loan.pledgedProperties?.length ? loan.pledgedProperties.join(", ") : "-"}
+                    </p>
+                    <p className="text-gray-600">
+                      <span className="text-gray-500">Given Date: </span>
+                      {loan.startDate}
+                    </p>
+                    <p>
+                      <span className="text-gray-500">Total Due: </span>
+                      ₹{(loan.totalAmount ?? loan.principal).toLocaleString()}
+                    </p>
+                  </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setLoanToDelete(loan)}
-                          className="p-2 rounded-lg hover:bg-red-50 text-red-600 cursor-pointer"
-                          title="Delete Loan"
-                        >
-                          <HiTrash className="text-lg" />
-                        </button>
-                      </div>
-                    </td>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/loans/${loan._id}`)}
+                      className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                      title="View Loan"
+                    >
+                      <HiEye className="text-lg" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingLoan(loan);
+                        setLoanDrawerOpen(true);
+                      }}
+                      className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                      title="Edit Loan"
+                    >
+                      <HiPencil className="text-lg" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setLoanToDelete(loan)}
+                      className="p-2 rounded-lg hover:bg-red-50 text-red-600 cursor-pointer"
+                      title="Delete Loan"
+                    >
+                      <HiTrash className="text-lg" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead className="bg-[var(--primary)] text-white uppercase text-xs">
+                  <tr>
+                    <th className="p-4 text-left">Principal</th>
+                    <th className="p-4 text-left">Total Due</th>
+                    <th className="p-4 text-left">Interest</th>
+                    <th className="p-4 text-left">Pledged</th>
+                    <th className="p-4 text-left">Given Date</th>
+                    <th className="p-4 text-left">Status</th>
+                    <th className="p-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {loans.map((loan) => (
+                    <tr
+                      key={loan._id}
+                      className="border-t hover:bg-gray-50 transition"
+                    >
+                      <td className="p-4 font-semibold">
+                        ₹{loan.principal.toLocaleString()}
+                      </td>
+                      <td className="p-4 font-semibold">
+                        ₹{(loan.totalAmount ?? loan.principal).toLocaleString()}
+                      </td>
+                      <td className="p-4">{loan.interestRate}%</td>
+                      <td className="p-4 text-xs text-gray-600 max-w-[260px]">
+                        {loan.pledgedProperties?.length
+                          ? loan.pledgedProperties.join(", ")
+                          : "-"}
+                      </td>
+                      <td className="p-4 text-xs text-gray-600 whitespace-nowrap">
+                        {loan.startDate}
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusStyle(
+                            loan.status,
+                          )}`}
+                        >
+                          {loan.status}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/loans/${loan._id}`)}
+                            className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                            title="View Loan"
+                          >
+                            <HiEye className="text-lg" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingLoan(loan);
+                              setLoanDrawerOpen(true);
+                            }}
+                            className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                            title="Edit Loan"
+                          >
+                            <HiPencil className="text-lg" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setLoanToDelete(loan)}
+                            className="p-2 rounded-lg hover:bg-red-50 text-red-600 cursor-pointer"
+                            title="Delete Loan"
+                          >
+                            <HiTrash className="text-lg" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

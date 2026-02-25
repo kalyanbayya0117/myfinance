@@ -381,30 +381,54 @@ export default function Settings() {
             <div className="px-4 py-3 border-b border-black/10">
               <h3 className="font-semibold">Application Users</h3>
             </div>
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--primary)] text-white uppercase text-xs">
-                <tr>
-                  <th className="p-3 text-left">Name</th>
-                  <th className="p-3 text-left">Email</th>
-                  <th className="p-3 text-left">Role</th>
-                  <th className="p-3 text-left">Last Login</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((entry) => (
-                  <tr key={entry.id} className="border-t">
-                    <td className="p-3 font-semibold">{entry.name}</td>
-                    <td className="p-3">{entry.email}</td>
-                    <td className="p-3 capitalize">{entry.role}</td>
-                    <td className="p-3 text-gray-600">
-                      {entry.lastLoginAt
-                        ? new Date(entry.lastLoginAt).toLocaleString()
-                        : "Never"}
-                    </td>
+            <div className="md:hidden divide-y divide-black/10">
+              {users.map((entry) => (
+                <div key={entry.id} className="p-4 space-y-2 text-sm">
+                  <p className="font-semibold">{entry.name}</p>
+                  <p>
+                    <span className="text-gray-500">Email: </span>
+                    {entry.email}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Role: </span>
+                    <span className="capitalize">{entry.role}</span>
+                  </p>
+                  <p className="text-gray-600">
+                    <span className="text-gray-500">Last login: </span>
+                    {entry.lastLoginAt
+                      ? new Date(entry.lastLoginAt).toLocaleString()
+                      : "Never"}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[var(--primary)] text-white uppercase text-xs">
+                  <tr>
+                    <th className="p-3 text-left">Name</th>
+                    <th className="p-3 text-left">Email</th>
+                    <th className="p-3 text-left">Role</th>
+                    <th className="p-3 text-left">Last Login</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map((entry) => (
+                    <tr key={entry.id} className="border-t">
+                      <td className="p-3 font-semibold">{entry.name}</td>
+                      <td className="p-3">{entry.email}</td>
+                      <td className="p-3 capitalize">{entry.role}</td>
+                      <td className="p-3 text-gray-600">
+                        {entry.lastLoginAt
+                          ? new Date(entry.lastLoginAt).toLocaleString()
+                          : "Never"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       ) : null}

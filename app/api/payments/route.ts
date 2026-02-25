@@ -6,19 +6,12 @@ import { Loan } from "@/models/Loan";
 import { ApiError, handleApiError, noStoreJson } from "@/lib/errors";
 import { requireAuth } from "@/lib/auth";
 import { enforceRateLimit, getRequestIp } from "@/lib/rate-limit";
+import { getLoanFinancials } from "@/lib/loan-calculations";
 
 const paymentSchema = z.object({
   loanId: z.string().min(1),
   amount: z.coerce.number().positive(),
 });
-
-function hasDueDatePassed(endDate: string) {
-  const dueDate = new Date(endDate);
-  if (Number.isNaN(dueDate.getTime())) return false;
-
-  dueDate.setHours(23, 59, 59, 999);
-  return Date.now() > dueDate.getTime();
-}
 
 export async function POST(req: Request) {
   try {
@@ -71,16 +64,15 @@ export async function POST(req: Request) {
     ]);
 
     const paidBefore = Number(totals[0]?.totalPaid ?? 0);
-    const remainingBefore = Math.max((Number(loan.principal) || 0) - paidBefore, 0);
+    const beforeFinancials = getLoanFinancials({
+      principal: Number(loan.principal) || 0,
+      interestRate: Number(loan.interestRate) || 0,
+      startDate: String(loan.startDate ?? ""),
+      totalPaid: paidBefore,
+      storedStatus: loan.status,
+    });
 
-    const effectiveStatus =
-      remainingBefore === 0 || loan.status === "closed"
-        ? "closed"
-        : hasDueDatePassed(loan.endDate)
-          ? "overdue"
-          : "active";
-
-    if (effectiveStatus === "closed") {
+    if (beforeFinancials.status === "closed") {
       throw new ApiError("This loan is already closed", 400);
     }
 
@@ -91,9 +83,15 @@ export async function POST(req: Request) {
     });
 
     const totalPaid = paidBefore + parsed.data.amount;
-    const remainingAmount = Math.max((Number(loan.principal) || 0) - totalPaid, 0);
+    const afterFinancials = getLoanFinancials({
+      principal: Number(loan.principal) || 0,
+      interestRate: Number(loan.interestRate) || 0,
+      startDate: String(loan.startDate ?? ""),
+      totalPaid,
+      storedStatus: loan.status,
+    });
 
-    const loanClosed = remainingAmount === 0 && loan.status !== "closed";
+    const loanClosed = afterFinancials.status === "closed" && loan.status !== "closed";
     if (loanClosed) {
       await Loan.findByIdAndUpdate(parsed.data.loanId, { status: "closed" });
     }
@@ -102,7 +100,7 @@ export async function POST(req: Request) {
       payment,
       loanClosed,
       clientName: loan.clientName ?? "",
-      remainingAmount,
+      remainingAmount: afterFinancials.remainingAmount,
     });
   } catch (error) {
     return handleApiError(error, "payments:create");

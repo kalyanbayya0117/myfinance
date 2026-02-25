@@ -4,6 +4,7 @@ import { ApiError, handleApiError, noStoreJson } from "@/lib/errors";
 import { requireAuth } from "@/lib/auth";
 import { enforceRateLimit, getRequestIp } from "@/lib/rate-limit";
 import { sanitizeEmail, sanitizePhone, sanitizeText } from "@/lib/sanitize";
+import { getClientsForUser } from "@/lib/server-data";
 import { z } from "zod";
 
 const createClientSchema = z.object({
@@ -16,23 +17,10 @@ const createClientSchema = z.object({
 export async function GET(req: Request) {
   try {
     const auth = await requireAuth(req);
-
-    await connectDB();
     const { searchParams } = new URL(req.url);
     const search = sanitizeText(searchParams.get("search") ?? "");
 
-    const query = search
-      ? {
-          userId: auth.userId,
-          $or: [
-            { name: { $regex: search, $options: "i" } },
-            { phone: { $regex: search, $options: "i" } },
-            { email: { $regex: search, $options: "i" } },
-          ],
-        }
-      : { userId: auth.userId };
-
-    const clients = await Client.find(query).sort({ createdAt: -1 }).lean();
+    const clients = await getClientsForUser(auth.userId, search);
     return noStoreJson(clients);
   } catch (error) {
     return handleApiError(error, "clients:get");

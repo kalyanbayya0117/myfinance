@@ -8,6 +8,7 @@ import { ApiError, handleApiError, noStoreJson } from "@/lib/errors";
 import { requireAuth } from "@/lib/auth";
 import { sanitizeEmail, sanitizePhone, sanitizeText } from "@/lib/sanitize";
 import { enforceRateLimit, getRequestIp } from "@/lib/rate-limit";
+import { getLoanFinancials } from "@/lib/loan-calculations";
 
 const updateClientSchema = z.object({
   name: z.string().min(2).max(80),
@@ -15,14 +16,6 @@ const updateClientSchema = z.object({
   email: z.string().email().or(z.literal("")),
   address: z.string().max(200),
 });
-
-function hasDueDatePassed(endDate: string) {
-  const dueDate = new Date(endDate);
-  if (Number.isNaN(dueDate.getTime())) return false;
-
-  dueDate.setHours(23, 59, 59, 999);
-  return Date.now() > dueDate.getTime();
-}
 
 type ClientRef =
   | string
@@ -38,8 +31,9 @@ function normalizeLoan<
     clientName?: string;
     phone?: string;
     principal?: number;
-    status?: "active" | "closed" | "overdue";
-    endDate?: string;
+    status?: "active" | "closed";
+    interestRate?: number;
+    startDate?: string;
   },
 >(loan: T) {
   const client = loan.clientId && typeof loan.clientId === "object" ? loan.clientId : null;
@@ -100,19 +94,17 @@ export async function GET(
     const loans = loansRaw.map((loan) => {
       const normalized = normalizeLoan(loan);
       const totalPaid = paidByLoanId.get(String(loan._id)) ?? 0;
-      const remainingAmount = Math.max((normalized.principal ?? 0) - totalPaid, 0);
-      const status =
-        remainingAmount === 0 || normalized.status === "closed"
-          ? "closed"
-          : hasDueDatePassed(normalized.endDate ?? "")
-            ? "overdue"
-            : "active";
+      const financials = getLoanFinancials({
+        principal: normalized.principal ?? 0,
+        interestRate: normalized.interestRate ?? 0,
+        startDate: normalized.startDate ?? "",
+        totalPaid,
+        storedStatus: normalized.status,
+      });
 
       return {
         ...normalized,
-        status,
-        totalPaid,
-        remainingAmount,
+        ...financials,
       };
     });
 

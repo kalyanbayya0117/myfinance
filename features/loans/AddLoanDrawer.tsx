@@ -28,6 +28,7 @@ export default function AddLoanDrawer({
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [forceNewClient, setForceNewClient] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const {
     register,
@@ -41,6 +42,7 @@ export default function AddLoanDrawer({
   });
 
   const clientInput = watch("clientName") ?? "";
+  const showSuggestionPanel = open && clientInput.trim().length > 0 && (!selectedClient || clientInput.trim() !== selectedClient.name);
 
   useEffect(() => {
     if (!open) return;
@@ -57,7 +59,6 @@ export default function AddLoanDrawer({
         principal: loan.principal,
         interestRate: loan.interestRate,
         startDate: loan.startDate,
-        endDate: loan.endDate,
       });
 
       setSelectedClient({
@@ -76,7 +77,6 @@ export default function AddLoanDrawer({
       principal: "" as unknown as number,
       interestRate: "" as unknown as number,
       startDate: "",
-      endDate: "",
     });
     setSelectedClient(null);
     setForceNewClient(false);
@@ -136,75 +136,95 @@ export default function AddLoanDrawer({
   };
 
   const onSubmit = async (data: LoanFormData) => {
+    setSubmitting(true);
     const isEdit = mode === "edit" && loan?._id;
 
-    const res = await fetch(isEdit ? `/api/loans/${loan._id}` : "/api/loans", {
-      method: isEdit ? "PUT" : "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...data,
-        pledgedProperties: data.pledgedPropertiesInput,
-        clientId: selectedClient?._id,
-        forceNewClient,
-      }),
-    });
+    try {
+      const res = await fetch(isEdit ? `/api/loans/${loan._id}` : "/api/loans", {
+        method: isEdit ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...data,
+          pledgedProperties: data.pledgedPropertiesInput,
+          clientId: selectedClient?._id,
+          forceNewClient,
+        }),
+      });
 
-    if (!res.ok) {
-      let message = isEdit ? "Failed to update loan" : "Failed to add loan";
+      if (!res.ok) {
+        let message = isEdit ? "Failed to update loan" : "Failed to add loan";
 
-      try {
-        const raw = await res.text();
-        if (raw.trim()) {
-          const parsed = JSON.parse(raw) as { message?: string };
-          if (parsed?.message) {
-            message = parsed.message;
+        try {
+          const raw = await res.text();
+          if (raw.trim()) {
+            const parsed = JSON.parse(raw) as { message?: string };
+            if (parsed?.message) {
+              message = parsed.message;
+            }
           }
+        } catch {
         }
-      } catch {
+
+        toast.error(message);
+        return;
       }
 
-      toast.error(message);
-      return;
+      toast.success(isEdit ? "Loan Updated" : "Loan Added");
+      reset();
+      setSelectedClient(null);
+      setForceNewClient(false);
+      setSuggestions([]);
+      onSaved();
+      onClose();
+    } finally {
+      setSubmitting(false);
     }
-
-    toast.success(isEdit ? "Loan Updated" : "Loan Added");
-    reset();
-    setSelectedClient(null);
-    setSuggestions([]);
-    onSaved();
-    onClose();
   };
 
   return (
     <div className={`fixed inset-0 z-40 ${open ? "visible" : "invisible"}`}>
-      <div onClick={onClose} className="absolute inset-0 bg-black/30" />
+      <div onClick={() => !submitting && onClose()} className="absolute inset-0 bg-black/30" />
 
       <div
-        className={`absolute right-0 top-0 h-full w-[420px] bg-white shadow-xl p-6 overflow-y-auto`}
+        className="absolute right-0 top-0 h-full w-full sm:w-[440px] bg-white shadow-xl flex flex-col"
       >
-        <div className="flex justify-between mb-6">
-          <h3 className="font-bold text-lg">{mode === "edit" ? "Edit Loan" : "Add Loan"}</h3>
-          <HiX onClick={onClose} className="cursor-pointer" />
+        <div className="flex items-start justify-between border-b border-black/10 p-5">
+          <div>
+            <h3 className="font-bold text-lg">{mode === "edit" ? "Edit Loan" : "Add Loan"}</h3>
+            <p className="text-xs text-gray-500 mt-1">Fill loan details and assign or create a client.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            className="rounded-lg p-2 hover:bg-gray-100 disabled:opacity-60 cursor-pointer"
+            aria-label="Close"
+          >
+            <HiX className="text-lg" />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="relative">
-            <input
-              {...register("clientName")}
-              placeholder="Client Name or Phone"
-              className="input"
-              autoComplete="off"
-            />
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Client Name
+            </label>
+            <div className="relative">
+              <input
+                {...register("clientName")}
+                placeholder="Client Name or Phone"
+                className="input"
+                autoComplete="off"
+              />
 
-            {clientInput.trim().length > 0 && (suggestions.length > 0 || loadingSuggestions) && (
-              <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 rounded-lg border border-black/10 bg-white shadow-sm max-h-44 overflow-y-auto">
-                {loadingSuggestions ? (
-                  <p className="px-3 py-2 text-sm text-gray-500">Searching clients...</p>
-                ) : (
-                  <>
-                    {suggestions.map((client) => (
+              {showSuggestionPanel ? (
+                <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 rounded-lg border border-black/10 bg-white shadow-sm max-h-52 overflow-y-auto">
+                  {loadingSuggestions ? (
+                    <p className="px-3 py-2 text-sm text-gray-500">Searching clients...</p>
+                  ) : suggestions.length > 0 ? (
+                    suggestions.map((client) => (
                       <button
                         key={client._id}
                         type="button"
@@ -214,55 +234,118 @@ export default function AddLoanDrawer({
                         <p className="text-sm font-semibold">{client.name}</p>
                         <p className="text-xs text-gray-500">{client.phone}</p>
                       </button>
-                    ))}
+                    ))
+                  ) : (
+                    <p className="px-3 py-2 text-sm text-gray-500">No matching client found.</p>
+                  )}
 
-                    <button
-                      type="button"
-                      onClick={chooseNewClient}
-                      className="w-full border-t border-black/10 px-3 py-2 text-left text-sm font-semibold text-[var(--primary)] hover:bg-gray-50"
-                    >
-                      Use as new client
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
+                  <button
+                    type="button"
+                    onClick={chooseNewClient}
+                    className="w-full border-t border-black/10 px-3 py-2 text-left text-sm font-semibold text-[var(--primary)] hover:bg-gray-50"
+                  >
+                    Use as new client
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            {errors.clientName?.message ? (
+              <p className="text-red-500 text-sm">{errors.clientName.message}</p>
+            ) : null}
           </div>
 
-          <p className="text-red-500 text-sm">{errors.clientName?.message}</p>
+          {selectedClient ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+              Existing client selected: <span className="font-semibold">{selectedClient.name}</span>
+            </div>
+          ) : forceNewClient ? (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+              A new client will be created from this form.
+            </div>
+          ) : null}
 
-          <input {...register("phone")} placeholder="Phone" className="input" />
-          <p className="text-red-500 text-sm">{errors.phone?.message}</p>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Phone
+            </label>
+            <input {...register("phone")} placeholder="Phone" className="input" />
+            {errors.phone?.message ? (
+              <p className="text-red-500 text-sm">{errors.phone.message}</p>
+            ) : null}
+          </div>
 
-          <input
-            {...register("pledgedPropertiesInput")}
-            placeholder="Pledged Property (optional, comma separated)"
-            className="input"
-          />
-          <p className="text-red-500 text-sm">{errors.pledgedPropertiesInput?.message}</p>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Pledged Properties
+            </label>
+            <input
+              {...register("pledgedPropertiesInput")}
+              placeholder="Optional, comma separated"
+              className="input"
+            />
+            {errors.pledgedPropertiesInput?.message ? (
+              <p className="text-red-500 text-sm">{errors.pledgedPropertiesInput.message as string}</p>
+            ) : null}
+          </div>
 
-          <input
-            {...register("principal")}
-            type="number"
-            placeholder="Amount"
-            className="input"
-          />
-          <input
-            {...register("interestRate")}
-            type="number"
-            placeholder="Interest %"
-            className="input"
-          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Principal Amount
+              </label>
+              <input
+                {...register("principal")}
+                type="number"
+                placeholder="Amount"
+                className="input"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Monthly Interest %
+              </label>
+              <input
+                {...register("interestRate")}
+                type="number"
+                placeholder="Interest %"
+                className="input"
+              />
+            </div>
+          </div>
 
-          <input {...register("startDate")} type="date" className="input" />
-          <input {...register("endDate")} type="date" className="input" />
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Given Date
+            </label>
+            <input {...register("startDate")} type="date" className="input" />
+          </div>
 
-          <button
-            className="w-full bg-[var(--primary)] text-white py-2 rounded-lg cursor-pointer"
-            type="submit"
-          >
-            {mode === "edit" ? "Update Loan" : "Save Loan"}
-          </button>
+          <div className="sticky bottom-0 bg-white pt-2">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={submitting}
+                className="w-1/2 border border-black/10 text-gray-700 py-2 rounded-lg cursor-pointer disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                className="w-1/2 bg-[var(--primary)] text-white py-2 rounded-lg cursor-pointer disabled:opacity-60"
+                type="submit"
+                disabled={submitting}
+              >
+                {submitting
+                  ? mode === "edit"
+                    ? "Updating..."
+                    : "Saving..."
+                  : mode === "edit"
+                    ? "Update Loan"
+                    : "Save Loan"}
+              </button>
+            </div>
+          </div>
+
         </form>
       </div>
     </div>

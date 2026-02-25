@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
@@ -10,14 +10,23 @@ import { HiEye, HiPencil, HiTrash } from "react-icons/hi";
 import { Client } from "./client.types";
 import AddClientDrawer from "./AddClientDrawer";
 
-export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+interface ClientsPageProps {
+  initialClients?: Client[];
+  initialLoaded?: boolean;
+}
+
+export default function ClientsPage({
+  initialClients = [],
+  initialLoaded = false,
+}: ClientsPageProps) {
+  const [clients, setClients] = useState<Client[]>(initialClients);
+  const [loading, setLoading] = useState(!initialLoaded);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState("");
+  const isFirstSearchEffect = useRef(true);
   const router = useRouter();
 
   const fetchClients = async (query = search) => {
@@ -40,12 +49,19 @@ export default function ClientsPage() {
   };
 
   useEffect(() => {
+    if (isFirstSearchEffect.current) {
+      isFirstSearchEffect.current = false;
+      if (initialLoaded && !search.trim()) {
+        return;
+      }
+    }
+
     const timer = setTimeout(() => {
       fetchClients(search);
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [initialLoaded, search]);
 
   const startCreate = () => {
     setEditingClient(null);
@@ -120,22 +136,12 @@ export default function ClientsPage() {
         <EmptyState text="Client list will appear here." />
       ) : (
         <div className="bg-white rounded-sm shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--primary)] text-white uppercase text-xs">
-              <tr>
-                <th className="p-4 text-left w-[60px]">#</th>
-                <th className="p-4 text-left">Name</th>
-                <th className="p-4 text-left">Phone</th>
-                <th className="p-4 text-left">Email</th>
-                <th className="p-4 text-left">Address</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map((client, index) => (
-                <tr key={client._id} className="border-t hover:bg-gray-50 transition">
-                  <td className="p-4 font-semibold text-gray-500">{index + 1}</td>
-                  <td className="p-4">
+          <div className="md:hidden divide-y divide-black/10">
+            {clients.map((client, index) => (
+              <div key={client._id} className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500">#{index + 1}</p>
                     <button
                       type="button"
                       onClick={() => router.push(`/clients/${client._id}`)}
@@ -143,42 +149,114 @@ export default function ClientsPage() {
                     >
                       {client.name}
                     </button>
-                  </td>
-                  <td className="p-4">{client.phone}</td>
-                  <td className="p-4 text-gray-600">{client.email || "-"}</td>
-                  <td className="p-4 text-gray-600">{client.address || "-"}</td>
-                  <td className="p-4">
-                    <div className="flex justify-end gap-2">
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/clients/${client._id}`)}
+                      className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                      title="View Client"
+                    >
+                      <HiEye className="text-lg" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(client)}
+                      className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                      title="Edit Client"
+                    >
+                      <HiPencil className="text-lg" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClientToDelete(client)}
+                      className="p-2 rounded-lg hover:bg-red-50 text-red-600 cursor-pointer"
+                      title="Delete Client"
+                    >
+                      <HiTrash className="text-lg" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <span className="text-gray-500">Phone: </span>
+                    {client.phone}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Email: </span>
+                    <span className="text-gray-600">{client.email || "-"}</span>
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Address: </span>
+                    <span className="text-gray-600">{client.address || "-"}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--primary)] text-white uppercase text-xs">
+                <tr>
+                  <th className="p-4 text-left w-[60px]">#</th>
+                  <th className="p-4 text-left">Name</th>
+                  <th className="p-4 text-left">Phone</th>
+                  <th className="p-4 text-left">Email</th>
+                  <th className="p-4 text-left">Address</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clients.map((client, index) => (
+                  <tr key={client._id} className="border-t hover:bg-gray-50 transition">
+                    <td className="p-4 font-semibold text-gray-500">{index + 1}</td>
+                    <td className="p-4">
                       <button
                         type="button"
                         onClick={() => router.push(`/clients/${client._id}`)}
-                        className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
-                        title="View Client"
+                        className="font-semibold text-left hover:text-[var(--primary)] cursor-pointer"
                       >
-                        <HiEye className="text-lg" />
+                        {client.name}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => startEdit(client)}
-                        className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
-                        title="Edit Client"
-                      >
-                        <HiPencil className="text-lg" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setClientToDelete(client)}
-                        className="p-2 rounded-lg hover:bg-red-50 text-red-600 cursor-pointer"
-                        title="Delete Client"
-                      >
-                        <HiTrash className="text-lg" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="p-4">{client.phone}</td>
+                    <td className="p-4 text-gray-600">{client.email || "-"}</td>
+                    <td className="p-4 text-gray-600">{client.address || "-"}</td>
+                    <td className="p-4">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/clients/${client._id}`)}
+                          className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                          title="View Client"
+                        >
+                          <HiEye className="text-lg" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => startEdit(client)}
+                          className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                          title="Edit Client"
+                        >
+                          <HiPencil className="text-lg" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setClientToDelete(client)}
+                          className="p-2 rounded-lg hover:bg-red-50 text-red-600 cursor-pointer"
+                          title="Delete Client"
+                        >
+                          <HiTrash className="text-lg" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </>

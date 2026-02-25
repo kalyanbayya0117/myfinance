@@ -36,7 +36,7 @@ npm run dev
 
 This endpoint works only when there is no owner account yet.
 
-`POST /api/auth/bootstrap-owner`
+<!-- `POST /api/auth/bootstrap-owner`
 
 Example body:
 
@@ -47,7 +47,7 @@ Example body:
   "password": "StrongPass123!",
   "bootstrapSecret": "same-as-OWNER_BOOTSTRAP_SECRET"
 }
-```
+``` -->
 
 After creating owner:
 1. Login at `/login`

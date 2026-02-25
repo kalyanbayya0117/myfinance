@@ -9,7 +9,6 @@ import {
   HiCash,
   HiCheckCircle,
   HiClock,
-  HiExclamationCircle,
   HiPencil,
   HiScale,
 } from "react-icons/hi";
@@ -66,14 +65,12 @@ export default function LoanDetailsPage({ id }: { id: string }) {
   if (!loan) return <p className="text-red-500">Loan not found</p>;
 
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-  const balance = Math.max(loan.principal - totalPaid, 0);
+  const totalDue = loan.totalAmount ?? loan.principal;
+  const balance = Math.max(totalDue - totalPaid, 0);
   const isLoanClosed = loan.status === "closed" || balance === 0;
-  const isLoanOverdue = loan.status === "overdue" && !isLoanClosed;
-  const loanStatusLabel = isLoanClosed ? "Closed" : isLoanOverdue ? "Overdue" : "Active";
+  const loanStatusLabel = isLoanClosed ? "Closed" : "Active";
   const loanStatusStyle = isLoanClosed
     ? "bg-green-50 text-green-700 border-green-200"
-    : isLoanOverdue
-    ? "bg-red-50 text-red-700 border-red-200"
     : "bg-emerald-50 text-emerald-700 border-emerald-200";
 
   const handlePayment = async () => {
@@ -157,8 +154,6 @@ export default function LoanDetailsPage({ id }: { id: string }) {
           <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${loanStatusStyle}`}>
             {isLoanClosed ? (
               <HiCheckCircle className="text-sm" />
-            ) : isLoanOverdue ? (
-              <HiExclamationCircle className="text-sm" />
             ) : (
               <HiClock className="text-sm" />
             )}
@@ -183,9 +178,10 @@ export default function LoanDetailsPage({ id }: { id: string }) {
 
           <div className="rounded-lg border border-black/10 bg-gray-50 p-3">
             <p className="inline-flex items-center gap-1 text-xs text-gray-500">
-              <HiCash className="text-sm" /> Balance
+              <HiCash className="text-sm" /> Total Due
             </p>
-            <p className="mt-1 text-lg font-bold">₹{balance.toLocaleString()}</p>
+            <p className="mt-1 text-lg font-bold">₹{totalDue.toLocaleString()}</p>
+            <p className="mt-1 text-xs text-gray-500">Balance: ₹{balance.toLocaleString()}</p>
           </div>
         </div>
 
@@ -213,9 +209,12 @@ export default function LoanDetailsPage({ id }: { id: string }) {
           </p>
           <p>
             <span className="inline-flex items-center gap-1 text-gray-500 mr-1">
-              <HiCalendar className="text-sm" /> End Date:
+              <HiCalendar className="text-sm" /> Accrued Months:
             </span>
-            <span className="font-semibold">{loan.endDate}</span>
+            <span className="font-semibold">{loan.monthsElapsed ?? 0}</span>
+          </p>
+          <p>
+            Accrued Interest: <span className="font-semibold">₹{(loan.accruedInterest ?? 0).toLocaleString()}</span>
           </p>
           <p className="sm:col-span-2">
             Pledged Properties:{" "}
@@ -259,13 +258,6 @@ export default function LoanDetailsPage({ id }: { id: string }) {
         <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700 inline-flex items-center gap-2">
           <HiCheckCircle className="text-base" />
           This loan is closed. Payments are disabled.
-        </div>
-      ) : null}
-
-      {isLoanOverdue ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 inline-flex items-center gap-2">
-          <HiExclamationCircle className="text-base" />
-          This loan is overdue.
         </div>
       ) : null}
 

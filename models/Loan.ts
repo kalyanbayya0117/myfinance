@@ -1,6 +1,6 @@
 import mongoose, { Schema, model, models } from "mongoose";
 
-type LoanStatus = "active" | "closed" | "overdue";
+type LoanStatus = "active" | "closed";
 
 interface LoanDocument {
   userId: mongoose.Types.ObjectId;
@@ -11,7 +11,6 @@ interface LoanDocument {
   principal: number;
   interestRate: number;
   startDate: string;
-  endDate: string;
   status: LoanStatus;
 }
 
@@ -34,10 +33,9 @@ const LoanSchema = new Schema<LoanDocument>(
     principal: { type: Number, required: true },
     interestRate: { type: Number, required: true },
     startDate: { type: String, required: true },
-    endDate: { type: String, required: true },
     status: {
       type: String,
-      enum: ["active", "closed", "overdue"],
+      enum: ["active", "closed"],
       default: "active",
     },
   },
@@ -75,6 +73,6 @@ if (existingLoanModel) {
 }
 
 LoanSchema.index({ userId: 1, clientId: 1, createdAt: -1 });
-LoanSchema.index({ userId: 1, status: 1, endDate: 1 });
+LoanSchema.index({ userId: 1, status: 1, createdAt: -1 });
 
 export const Loan = existingLoanModel || model<LoanDocument>("Loan", LoanSchema);

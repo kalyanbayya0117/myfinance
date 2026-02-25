@@ -14,7 +14,6 @@ export const loanSchema = z.object({
   principal: z.coerce.number().positive(),
   interestRate: z.coerce.number().positive(),
   startDate: z.string(),
-  endDate: z.string(),
 });
 
 export type LoanFormInput = z.input<typeof loanSchema>;

@@ -5,10 +5,13 @@ export type Loan = {
   phone: string;
   pledgedProperties?: string[];
   principal: number;
+  monthlyInterestAmount?: number;
+  monthsElapsed?: number;
+  accruedInterest?: number;
+  totalAmount?: number;
   totalPaid?: number;
   remainingAmount?: number;
   interestRate: number;
   startDate: string;
-  endDate: string;
-  status: "active" | "closed" | "overdue";
+  status: "active" | "closed";
 };

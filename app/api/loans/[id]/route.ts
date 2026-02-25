@@ -8,6 +8,7 @@ import { ApiError, handleApiError, noStoreJson } from "@/lib/errors";
 import { requireAuth } from "@/lib/auth";
 import { sanitizePhone, sanitizeText } from "@/lib/sanitize";
 import { enforceRateLimit, getRequestIp } from "@/lib/rate-limit";
+import { getLoanFinancials } from "@/lib/loan-calculations";
 
 const updateLoanSchema = z.object({
   clientName: z.string().min(2).max(80),
@@ -16,10 +17,9 @@ const updateLoanSchema = z.object({
   principal: z.coerce.number().positive(),
   interestRate: z.coerce.number().positive(),
   startDate: z.string().min(4),
-  endDate: z.string().min(4),
   clientId: z.string().optional(),
   forceNewClient: z.boolean().optional().default(false),
-  status: z.enum(["active", "closed", "overdue"]).optional(),
+  status: z.enum(["active", "closed"]).optional(),
 });
 
 type ClientRef =
@@ -36,8 +36,7 @@ function normalizeLoan<
     clientName?: string;
     phone?: string;
     principal?: number;
-    status?: "active" | "closed" | "overdue";
-    endDate?: string;
+    status?: "active" | "closed";
   },
 >(loan: T) {
   const client = loan.clientId && typeof loan.clientId === "object" ? loan.clientId : null;
@@ -48,14 +47,6 @@ function normalizeLoan<
     clientName: client?.name ?? loan.clientName ?? "",
     phone: client?.phone ?? loan.phone ?? "",
   };
-}
-
-function hasDueDatePassed(endDate: string) {
-  const dueDate = new Date(endDate);
-  if (Number.isNaN(dueDate.getTime())) return false;
-
-  dueDate.setHours(23, 59, 59, 999);
-  return Date.now() > dueDate.getTime();
 }
 
 export async function GET(
@@ -85,20 +76,18 @@ export async function GET(
       .lean();
 
     const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-    const remainingAmount = Math.max((Number(loan.principal) || 0) - totalPaid, 0);
-    const effectiveStatus =
-      remainingAmount === 0 || loan.status === "closed"
-        ? "closed"
-        : hasDueDatePassed(loan.endDate ?? "")
-          ? "overdue"
-          : "active";
+    const financials = getLoanFinancials({
+      principal: Number(loan.principal) || 0,
+      interestRate: Number(loan.interestRate) || 0,
+      startDate: String(loan.startDate ?? ""),
+      totalPaid,
+      storedStatus: loan.status,
+    });
 
     return noStoreJson({
       loan: {
         ...loan,
-        status: effectiveStatus,
-        totalPaid,
-        remainingAmount,
+        ...financials,
       },
       payments,
     });
@@ -143,7 +132,6 @@ export async function PUT(
       principal: body?.principal,
       interestRate: body?.interestRate,
       startDate: sanitizeText(body?.startDate),
-      endDate: sanitizeText(body?.endDate),
       clientId: sanitizeText(body?.clientId),
       forceNewClient: Boolean(body?.forceNewClient),
       status: body?.status,
@@ -191,7 +179,6 @@ export async function PUT(
         principal: parsed.data.principal,
         interestRate: parsed.data.interestRate,
         startDate: parsed.data.startDate,
-        endDate: parsed.data.endDate,
         status: parsed.data.status ?? "active",
       },
       { new: true },

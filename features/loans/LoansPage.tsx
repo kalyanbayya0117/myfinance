@@ -6,7 +6,15 @@ import AddLoanDrawer from "./AddLoanDrawer";
 import PageHeader from "@/components/ui/PageHeader";
 import { Loan } from "./loan.types";
 
-export default function LoansPage() {
+interface LoansPageProps {
+  initialLoans?: Loan[];
+  initialLoaded?: boolean;
+}
+
+export default function LoansPage({
+  initialLoans = [],
+  initialLoaded = false,
+}: LoansPageProps) {
   const [open, setOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
@@ -44,11 +52,12 @@ export default function LoansPage() {
           <option value="all">All Status</option>
           <option value="active">Active</option>
           <option value="closed">Closed</option>
-          <option value="overdue">Overdue</option>
         </select>
       </div>
 
       <LoansTable
+        initialData={initialLoans}
+        initialLoaded={initialLoaded}
         refreshKey={refreshKey}
         search={search}
         status={status}
