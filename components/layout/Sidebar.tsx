@@ -35,10 +35,17 @@ const Sidebar = ({ onClose }: Props) => {
           w-64 h-screen bg-white border-r border-black/10 overflow-hidden
         `}
       >
-        <div className="p-6 font-extrabold text-[1.2rem] text-[var(--primary)] flex items-center justify-between">
-          <span>
-            My<span className="text-black"> Finance</span>
-          </span>
+        <div className="px-5 py-5 border-black/10">
+          <div className="inline-flex items-center gap-3 rounded-xl border border-[var(--primary)]/20 bg-[var(--primary)]/5 px-3 py-2">
+            <div className="h-9 w-9 rounded-lg bg-[var(--primary)] text-white inline-flex items-center justify-center text-sm font-extrabold tracking-wide">
+              KP
+            </div>
+
+            <div className="leading-tight">
+              <p className="text-[0.95rem] font-extrabold text-[var(--primary)]">Kalyan</p>
+              <p className="text-[0.75rem] font-semibold uppercase tracking-wide text-black/70">Pawn Brokers</p>
+            </div>
+          </div>
         </div>
 
         <nav className="flex flex-col gap-1 px-3">

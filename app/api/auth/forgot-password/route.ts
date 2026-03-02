@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       user.resetPasswordExpiresAt = expiresAt;
       await user.save();
 
-      const origin = process.env.NEXT_PUBLIC_APP_URL;
+      const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
       const resetUrl = `${origin}/reset-password?token=${rawToken}`;
 
       await sendPasswordResetEmail({

@@ -194,7 +194,7 @@ export default function LoansTable({
                   <span className="font-semibold">₹{loan.principal.toLocaleString()}</span>
                 </p>
                 <p>
-                  <span className="text-gray-500">Interest: </span>
+                  <span className="text-gray-500">Daily Interest: </span>
                   {loan.interestRate}%
                 </p>
                 <p>
@@ -254,7 +254,7 @@ export default function LoansTable({
                 <th className="p-4 text-left">Client</th>
                 <th className="p-4 text-left">Principal</th>
                 <th className="p-4 text-left">Total Due</th>
-                <th className="p-4 text-left">Interest</th>
+                <th className="p-4 text-left">Daily Interest</th>
                 <th className="p-4 text-left">Pledged</th>
                 <th className="p-4 text-left">Given Date</th>
                 <th className="p-4 text-left">Status</th>

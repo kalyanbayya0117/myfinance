@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const loanSchema = z.object({
+  loanId: z.string().min(1, "Loan ID required").max(60, "Loan ID is too long"),
   clientName: z.string().min(2, "Client name required"),
   phone: z.string().min(10, "Valid phone required"),
   pledgedPropertiesInput: z

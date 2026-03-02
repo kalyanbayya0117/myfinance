@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Terms and Conditions | MyFinance Admin",
-  description: "Terms and Conditions for using the MyFinance Admin platform.",
+  title: "Terms and Conditions | Kalyan Pawn Brokers",
+  description: "Terms and Conditions for using the Kalyan Pawn Brokers platform.",
 };
 
 export default function TermsAndConditionsPage() {
@@ -14,7 +14,7 @@ export default function TermsAndConditionsPage() {
           href="/"
           className="inline-flex items-center gap-1 text-lg font-extrabold text-[var(--primary)] mb-10 border-b border-black/10 pb-4 w-full"
         >
-          My<span className="text-black">Finance</span>
+          Kalyan<span className="text-black"> Pawn Brokers</span>
         </Link>
         <h1 className="text-3xl font-extrabold text-black sm:text-4xl">
           Terms and Conditions
@@ -25,7 +25,7 @@ export default function TermsAndConditionsPage() {
           <section>
             <h2 className="text-xl font-bold text-black">1. Acceptance of Terms</h2>
             <p className="mt-2">
-              By accessing or using the MyFinance Admin platform (the “Service”), you agree to be
+              By accessing or using the Kalyan Pawn Brokers platform (the “Service”), you agree to be
               bound by these Terms and Conditions. If you do not agree with these terms, you must
               not use the Service.
             </p>
@@ -83,7 +83,7 @@ export default function TermsAndConditionsPage() {
             <h2 className="text-xl font-bold text-black">7. Intellectual Property</h2>
             <p className="mt-2">
               All rights, title, and interest in the Service, including software, design, and
-              content (excluding your submitted data), remain the property of MyFinance or its
+              content (excluding your submitted data), remain the property of Kalyan Pawn Brokers or its
               licensors.
             </p>
           </section>
@@ -91,7 +91,7 @@ export default function TermsAndConditionsPage() {
           <section>
             <h2 className="text-xl font-bold text-black">8. Limitation of Liability</h2>
             <p className="mt-2">
-              To the maximum extent permitted by law, MyFinance is not liable for indirect,
+              To the maximum extent permitted by law, Kalyan Pawn Brokers is not liable for indirect,
               incidental, special, or consequential losses, including lost profits, data, or
               business opportunities resulting from use of the Service.
             </p>
@@ -117,8 +117,8 @@ export default function TermsAndConditionsPage() {
             <h2 className="text-xl font-bold text-black">11. Contact</h2>
             <p className="mt-2">
               For questions regarding these Terms, contact us at{" "}
-              <a className="font-semibold text-[var(--primary)] hover:underline" href="mailto:support@myfinance.com">
-                support@myfinance.com
+              <a className="font-semibold text-[var(--primary)] hover:underline" href="mailto:support@kalyanpawnbrokers.com">
+                support@kalyanpawnbrokers.com
               </a>
               .
             </p>

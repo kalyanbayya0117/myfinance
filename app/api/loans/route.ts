@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const loanSchema = z.object({
+  loanId: z.string().min(1).max(60),
   clientName: z.string().min(2).max(80),
   phone: z.string().min(6).max(24),
   pledgedProperties: z.array(z.string().min(1)).optional().default([]),
@@ -22,54 +23,6 @@ const loanSchema = z.object({
   clientId: z.string().optional(),
   forceNewClient: z.boolean().optional().default(false),
 });
-
-function getLoanIdNameSegment(input: string) {
-  const cleaned = sanitizeText(input).replace(/[^a-zA-Z]/g, "").toUpperCase();
-  return (cleaned || "USER").slice(0, 4).padEnd(4, "X");
-}
-
-async function buildLoanId({
-  userId,
-  clientName,
-}: {
-  userId: string;
-  clientName: string;
-}) {
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const year = String(now.getFullYear());
-  const namePart = getLoanIdNameSegment(clientName);
-  const datePart = `${day}${month}${year}`;
-
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfNextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-
-  const todayCount = await Loan.countDocuments({
-    userId,
-    createdAt: {
-      $gte: startOfDay,
-      $lt: startOfNextDay,
-    },
-  });
-
-  let sequence = todayCount + 1;
-  let loanId = "";
-
-  while (true) {
-    const sequencePart = String(sequence).padStart(2, "0");
-    loanId = `LID${datePart}${namePart}${sequencePart}`;
-
-    const exists = await Loan.exists({ userId, loanId });
-    if (!exists) {
-      break;
-    }
-
-    sequence += 1;
-  }
-
-  return loanId;
-}
 
 export async function GET(req: Request) {
   try {
@@ -111,6 +64,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const parsed = loanSchema.safeParse({
+      loanId: sanitizeText(body?.loanId),
       clientName: sanitizeText(body?.clientName),
       phone: sanitizePhone(body?.phone),
       pledgedProperties: Array.isArray(body?.pledgedProperties)
@@ -127,6 +81,15 @@ export async function POST(req: Request) {
 
     if (!parsed.success) {
       throw new ApiError("Invalid loan details", 400);
+    }
+
+    const existingLoanId = await Loan.exists({
+      userId: auth.userId,
+      loanId: parsed.data.loanId,
+    });
+
+    if (existingLoanId) {
+      throw new ApiError("Loan ID already exists", 409);
     }
 
     let clientDoc = null;
@@ -152,15 +115,10 @@ export async function POST(req: Request) {
       });
     }
 
-    const loanId = await buildLoanId({
-      userId: auth.userId,
-      clientName: clientDoc.name,
-    });
-
     const loan = await Loan.create({
       userId: auth.userId,
       clientId: clientDoc._id,
-      loanId,
+      loanId: parsed.data.loanId,
       clientName: clientDoc.name,
       phone: clientDoc.phone,
       pledgedProperties: parsed.data.pledgedProperties,

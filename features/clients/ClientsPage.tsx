@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
@@ -29,7 +29,7 @@ export default function ClientsPage({
   const isFirstSearchEffect = useRef(true);
   const router = useRouter();
 
-  const fetchClients = async (query = search) => {
+  const fetchClients = useCallback(async (query = "") => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -46,7 +46,7 @@ export default function ClientsPage({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (isFirstSearchEffect.current) {
@@ -61,7 +61,7 @@ export default function ClientsPage({
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [initialLoaded, search]);
+  }, [fetchClients, initialLoaded, search]);
 
   const startCreate = () => {
     setEditingClient(null);
@@ -130,7 +130,7 @@ export default function ClientsPage({
           setDrawerOpen(false);
           setEditingClient(null);
         }}
-        onSaved={fetchClients}
+        onSaved={() => fetchClients(search)}
         editingClient={editingClient}
       />
 

@@ -1,4 +1,4 @@
-# MyFinance
+# KalyanPawnBrokers
 
 Secure multi-tenant loan management application built with Next.js and MongoDB.
 
@@ -8,7 +8,7 @@ Secure multi-tenant loan management application built with Next.js and MongoDB.
 - Owner and User role-based access control
 - Tenant data isolation using `userId` scoping in all business APIs
 - Password hashing with `bcryptjs`
-- Route protection via `middleware.ts` for pages and APIs
+- Route protection via `proxy.ts` for pages and APIs
 - Input validation and sanitization in APIs
 - In-memory rate limiting on sensitive endpoints
 - Safe API error handling with no-store cache headers
@@ -29,7 +29,7 @@ APPLICATION_MAIL_PASSWORD=your-mail-password-or-app-password
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_SECURE=false
-MAIL_FROM=MyFinance <no-reply@example.com>
+MAIL_FROM=KalyanPawnBrokers <no-reply@example.com>
 ```
 
 ## Install and Run

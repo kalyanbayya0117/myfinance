@@ -6,6 +6,10 @@ import { Client } from "@/models/Client";
 import { Loan } from "@/models/Loan";
 import { Payment } from "@/models/Payment";
 
+function escapeRegex(input: string) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 type ClientRef =
   | string
   | {
@@ -41,18 +45,27 @@ export async function getClientsForUser(userId: string, searchInput = "") {
   await connectDB();
 
   const search = sanitizeText(searchInput);
+  const safeSearch = search ? escapeRegex(search) : "";
   const query = search
     ? {
         userId,
         $or: [
-          { name: { $regex: search, $options: "i" } },
-          { phone: { $regex: search, $options: "i" } },
-          { email: { $regex: search, $options: "i" } },
+          { name: { $regex: safeSearch, $options: "i" } },
+          { phone: { $regex: safeSearch, $options: "i" } },
+          { email: { $regex: safeSearch, $options: "i" } },
         ],
       }
     : { userId };
 
-  const clients = await Client.find(query).sort({ createdAt: -1 }).lean();
+  const clients = await Client.find(query, {
+    _id: 1,
+    name: 1,
+    phone: 1,
+    email: 1,
+    address: 1,
+  })
+    .sort({ createdAt: -1 })
+    .lean();
 
   return clients.map((client) => ({
     _id: String(client._id),
@@ -77,6 +90,7 @@ export async function getLoansForUser({
   await connectDB();
 
   const search = sanitizeText(searchInput);
+  const safeSearch = search ? escapeRegex(search) : "";
   const status = sanitizeText(statusInput || "all");
   const clientId = sanitizeText(clientIdInput);
 
@@ -85,8 +99,27 @@ export async function getLoansForUser({
     query.clientId = clientId;
   }
 
-  const loans = await Loan.find(query)
-    .populate({ path: "clientId", select: "name phone", strictPopulate: false })
+  if (safeSearch) {
+    query.$or = [
+      { clientName: { $regex: safeSearch, $options: "i" } },
+      { phone: { $regex: safeSearch, $options: "i" } },
+      { loanId: { $regex: safeSearch, $options: "i" } },
+    ];
+  }
+
+  const loans = await Loan.find(query, {
+    _id: 1,
+    clientId: 1,
+    loanId: 1,
+    clientName: 1,
+    phone: 1,
+    pledgedProperties: 1,
+    principal: 1,
+    interestRate: 1,
+    startDate: 1,
+    status: 1,
+    createdAt: 1,
+  })
     .sort({ createdAt: -1 })
     .lean();
 
@@ -95,6 +128,7 @@ export async function getLoansForUser({
     ? await Payment.aggregate([
         {
           $match: {
+            userId: new mongoose.Types.ObjectId(userId),
             loanId: { $in: loanIds },
           },
         },
@@ -128,17 +162,7 @@ export async function getLoansForUser({
     };
   });
 
-  const searchFilteredLoans = search
-    ? normalizedLoans.filter((loan) => {
-        const keyword = search.toLowerCase();
-        return (
-          loan.clientName.toLowerCase().includes(keyword) ||
-          loan.phone.toLowerCase().includes(keyword)
-        );
-      })
-    : normalizedLoans;
-
   return status && status !== "all"
-    ? searchFilteredLoans.filter((loan) => loan.status === status)
-    : searchFilteredLoans;
+    ? normalizedLoans.filter((loan) => loan.status === status)
+    : normalizedLoans;
 }

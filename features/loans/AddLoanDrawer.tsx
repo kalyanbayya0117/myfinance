@@ -59,6 +59,7 @@ export default function AddLoanDrawer({
         : "";
 
       reset({
+        loanId: loan.loanId ?? "",
         clientName: loan.clientName ?? "",
         phone: loan.phone ?? "",
         pledgedPropertiesInput: pledgedText,
@@ -77,6 +78,7 @@ export default function AddLoanDrawer({
     }
 
     reset({
+      loanId: "",
       clientName: "",
       phone: "",
       pledgedPropertiesInput: "",
@@ -215,6 +217,16 @@ export default function AddLoanDrawer({
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto p-5 space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Loan ID
+            </label>
+            <input {...register("loanId")} placeholder="Enter Loan ID" className="input" />
+            {errors.loanId?.message ? (
+              <p className="text-red-500 text-sm">{errors.loanId.message}</p>
+            ) : null}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Client Name
             </label>
             <div className="relative">
@@ -315,7 +327,7 @@ export default function AddLoanDrawer({
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Monthly Interest %
+                Daily Interest %
               </label>
               <input
                 {...register("interestRate")}

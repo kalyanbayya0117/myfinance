@@ -82,6 +82,7 @@ if (existingLoanModel) {
 
 LoanSchema.index({ userId: 1, clientId: 1, createdAt: -1 });
 LoanSchema.index({ userId: 1, status: 1, createdAt: -1 });
+LoanSchema.index({ userId: 1, createdAt: -1 });
 LoanSchema.index({ userId: 1, loanId: 1 }, { unique: true });
 
 export const Loan = existingLoanModel || model<LoanDocument>("Loan", LoanSchema);

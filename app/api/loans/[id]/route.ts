@@ -11,6 +11,7 @@ import { enforceRateLimit, getRequestIp } from "@/lib/rate-limit";
 import { getLoanFinancials } from "@/lib/loan-calculations";
 
 const updateLoanSchema = z.object({
+  loanId: z.string().min(1).max(60),
   clientName: z.string().min(2).max(80),
   phone: z.string().min(6).max(24),
   pledgedProperties: z.array(z.string().min(1)).optional().default([]),
@@ -71,7 +72,7 @@ export async function GET(
       throw new ApiError("Loan not found", 404);
     }
 
-    const payments = await Payment.find({ loanId: id })
+    const payments = await Payment.find({ loanId: id, userId: auth.userId })
       .sort({ date: -1 })
       .lean();
 
@@ -122,6 +123,7 @@ export async function PUT(
     const body = await req.json();
 
     const parsed = updateLoanSchema.safeParse({
+      loanId: sanitizeText(body?.loanId),
       clientName: sanitizeText(body?.clientName),
       phone: sanitizePhone(body?.phone),
       pledgedProperties: Array.isArray(body?.pledgedProperties)
@@ -139,6 +141,16 @@ export async function PUT(
 
     if (!parsed.success) {
       throw new ApiError("Invalid loan details", 400);
+    }
+
+    const existingLoanId = await Loan.exists({
+      userId: auth.userId,
+      loanId: parsed.data.loanId,
+      _id: { $ne: id },
+    });
+
+    if (existingLoanId) {
+      throw new ApiError("Loan ID already exists", 409);
     }
 
     let clientDoc = null;
@@ -173,6 +185,7 @@ export async function PUT(
       {
         userId: auth.userId,
         clientId: clientDoc._id,
+        loanId: parsed.data.loanId,
         clientName: clientDoc.name,
         phone: clientDoc.phone,
         pledgedProperties: parsed.data.pledgedProperties,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loan } from "../loans/loan.types";
 import { Client } from "./client.types";
@@ -44,7 +44,7 @@ export default function ClientDetailsPage({ id }: { id: string }) {
     }
   };
 
-  const fetchClientDetails = async () => {
+  const fetchClientDetails = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`/api/clients/${id}`);
@@ -58,13 +58,13 @@ export default function ClientDetailsPage({ id }: { id: string }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchClientDetails();
-  }, [id]);
+  }, [fetchClientDetails]);
 
-  const loans = data?.loans ?? [];
+  const loans = useMemo(() => data?.loans ?? [], [data]);
   const activeLoans = useMemo(
     () => loans.filter((loan) => loan.status !== "closed"),
     [loans],

@@ -93,7 +93,10 @@ export async function POST(req: Request) {
 
     const loanClosed = afterFinancials.status === "closed" && loan.status !== "closed";
     if (loanClosed) {
-      await Loan.findByIdAndUpdate(parsed.data.loanId, { status: "closed" });
+      await Loan.findOneAndUpdate(
+        { _id: parsed.data.loanId, userId: auth.userId },
+        { status: "closed" },
+      );
     }
 
     return noStoreJson({

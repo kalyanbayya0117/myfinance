@@ -13,20 +13,9 @@ type CurrentUser = {
   role: "owner" | "user";
 };
 
-type AppUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: "owner" | "user";
-  isActive: boolean;
-  createdAt?: string;
-  lastLoginAt?: string;
-};
-
 export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<CurrentUser | null>(null);
-  const [users, setUsers] = useState<AppUser[]>([]);
 
   const [profileName, setProfileName] = useState("");
   const [profileEmail, setProfileEmail] = useState("");
@@ -38,16 +27,6 @@ export default function Settings() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
-  const [newUserName, setNewUserName] = useState("");
-  const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserPassword, setNewUserPassword] = useState("");
-  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
-  const [creatingUser, setCreatingUser] = useState(false);
-
-  const [passwordResetUserId, setPasswordResetUserId] = useState("");
-  const [passwordResetValue, setPasswordResetValue] = useState("");
-  const [showResetPassword, setShowResetPassword] = useState(false);
-  const [resettingPassword, setResettingPassword] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -65,27 +44,11 @@ export default function Settings() {
     return payload.user;
   };
 
-  const fetchUsers = async () => {
-    const res = await fetch("/api/users");
-    if (!res.ok) {
-      setUsers([]);
-      return;
-    }
-
-    const payload = (await res.json()) as AppUser[];
-    setUsers(payload);
-  };
-
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
-        const me = await fetchMe();
-        if (!me) return;
-
-        if (me.role === "owner") {
-          await fetchUsers();
-        }
+        await fetchMe();
       } finally {
         setLoading(false);
       }
@@ -171,78 +134,6 @@ export default function Settings() {
       toast.success("Password changed successfully");
     } finally {
       setChangingPassword(false);
-    }
-  };
-
-  const handleCreateUser = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!newUserName || !newUserEmail || !newUserPassword) {
-      toast.error("Name, email, and password are required");
-      return;
-    }
-
-    setCreatingUser(true);
-    try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: newUserName,
-          email: newUserEmail,
-          password: newUserPassword,
-        }),
-      });
-
-      if (!res.ok) {
-        const payload = (await res.json().catch(() => null)) as { message?: string } | null;
-        toast.error(payload?.message || "Failed to create user");
-        return;
-      }
-
-      setNewUserName("");
-      setNewUserEmail("");
-      setNewUserPassword("");
-      toast.success("User created successfully");
-      await fetchUsers();
-    } finally {
-      setCreatingUser(false);
-    }
-  };
-
-  const handleResetPassword = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!passwordResetUserId || !passwordResetValue) {
-      toast.error("Select user and enter a new password");
-      return;
-    }
-
-    setResettingPassword(true);
-    try {
-      const res = await fetch(`/api/users/${passwordResetUserId}/password`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          newPassword: passwordResetValue,
-        }),
-      });
-
-      if (!res.ok) {
-        const payload = (await res.json().catch(() => null)) as { message?: string } | null;
-        toast.error(payload?.message || "Failed to update password");
-        return;
-      }
-
-      setPasswordResetUserId("");
-      setPasswordResetValue("");
-      toast.success("User password updated");
-    } finally {
-      setResettingPassword(false);
     }
   };
 

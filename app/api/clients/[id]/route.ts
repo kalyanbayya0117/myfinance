@@ -75,6 +75,7 @@ export async function GET(
       ? await Payment.aggregate([
           {
             $match: {
+              userId: new mongoose.Types.ObjectId(auth.userId),
               loanId: { $in: loanIds },
             },
           },

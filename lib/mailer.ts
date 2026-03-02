@@ -41,13 +41,13 @@ export async function sendPasswordResetEmail(options: {
   await transporter.sendMail({
     from: config.from,
     to: options.to,
-    subject: "Reset your MyFinance password",
-    text: `Hi ${options.name},\n\nWe received a request to reset your MyFinance password.\n\nReset password: ${options.resetUrl}\n\nThis link is valid for ${options.expiresInMinutes} minutes and can be used only once.\n\nIf you did not request this, you can safely ignore this email.`,
+    subject: "Reset your Kalyan Pawn Brokers password",
+    text: `Hi ${options.name},\n\nWe received a request to reset your Kalyan Pawn Brokers password.\n\nReset password: ${options.resetUrl}\n\nThis link is valid for ${options.expiresInMinutes} minutes and can be used only once.\n\nIf you did not request this, you can safely ignore this email.`,
     html: `
       <div style="margin:0;padding:24px;background:#f6f7fb;font-family:Arial,sans-serif;color:#111;line-height:1.5;">
         <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e8e8e8;border-radius:12px;overflow:hidden;">
           <div style="padding:20px 24px;background:#faf5ff;border-bottom:1px solid #efefef;">
-            <p style="margin:0;font-size:18px;font-weight:700;color:#b100ff;">MyFinance</p>
+            <p style="margin:0;font-size:18px;font-weight:700;color:#b100ff;">Kalyan Pawn Brokers</p>
             <p style="margin:6px 0 0 0;font-size:13px;color:#555;">Password Reset Request</p>
           </div>
 

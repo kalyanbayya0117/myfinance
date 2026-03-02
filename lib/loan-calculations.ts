@@ -7,25 +7,15 @@ function toDateOnly(input: string) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-export function getAccrualMonthsOnFirst(startDateInput: string, asOfDate: Date = new Date()) {
+export function getAccruedDays(startDateInput: string, asOfDate: Date = new Date()) {
   const startDate = toDateOnly(startDateInput);
   if (!startDate) return 0;
 
   const today = new Date(asOfDate.getFullYear(), asOfDate.getMonth(), asOfDate.getDate());
   if (today <= startDate) return 0;
 
-  let accrualPoint = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-  if (accrualPoint <= startDate) {
-    accrualPoint = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
-  }
-
-  let months = 0;
-  while (accrualPoint <= today) {
-    months += 1;
-    accrualPoint = new Date(accrualPoint.getFullYear(), accrualPoint.getMonth() + 1, 1);
-  }
-
-  return months;
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.floor((today.getTime() - startDate.getTime()) / msPerDay);
 }
 
 export function getLoanFinancials({
@@ -45,9 +35,9 @@ export function getLoanFinancials({
   const safeInterestRate = Number(interestRate) || 0;
   const safeTotalPaid = Number(totalPaid) || 0;
 
-  const monthsElapsed = getAccrualMonthsOnFirst(startDate);
-  const monthlyInterestAmount = (safePrincipal * safeInterestRate) / 100;
-  const accruedInterest = monthlyInterestAmount * monthsElapsed;
+  const daysElapsed = getAccruedDays(startDate);
+  const dailyInterestAmount = (safePrincipal * safeInterestRate) / 100;
+  const accruedInterest = dailyInterestAmount * daysElapsed;
   const totalAmount = safePrincipal + accruedInterest;
   const remainingAmount = Math.max(totalAmount - safeTotalPaid, 0);
 
@@ -55,8 +45,8 @@ export function getLoanFinancials({
     remainingAmount === 0 || storedStatus === "closed" ? "closed" : "active";
 
   return {
-    monthsElapsed,
-    monthlyInterestAmount,
+    daysElapsed,
+    dailyInterestAmount,
     accruedInterest,
     totalAmount,
     totalPaid: safeTotalPaid,

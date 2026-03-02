@@ -6,8 +6,8 @@ export type Loan = {
   phone: string;
   pledgedProperties?: string[];
   principal: number;
-  monthlyInterestAmount?: number;
-  monthsElapsed?: number;
+  dailyInterestAmount?: number;
+  daysElapsed?: number;
   accruedInterest?: number;
   totalAmount?: number;
   totalPaid?: number;

@@ -10,7 +10,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "MyFinance Admin",
+  title: "Kalyan Pawn Brokers",
   description: "Finance Management System",
 };
 

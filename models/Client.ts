@@ -26,6 +26,7 @@ const ClientSchema = new Schema<ClientDocument>(
 
 ClientSchema.index({ userId: 1, createdAt: -1 });
 ClientSchema.index({ userId: 1, phone: 1 });
+ClientSchema.index({ userId: 1, name: 1 });
 
 const existingClientModel = models.Client as mongoose.Model<ClientDocument> | undefined;
 

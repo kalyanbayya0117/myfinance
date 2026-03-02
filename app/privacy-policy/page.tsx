@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | MyFinance Admin",
-  description: "Privacy Policy for the MyFinance Admin platform.",
+  title: "Privacy Policy | Kalyan Pawn Brokers",
+  description: "Privacy Policy for the Kalyan Pawn Brokers platform.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -14,7 +14,7 @@ export default function PrivacyPolicyPage() {
           href="/"
           className="inline-flex items-center gap-1 text-lg font-extrabold text-[var(--primary)] mb-10 border-b border-black/10 pb-4 w-full"
         >
-          My<span className="text-black">Finance</span>
+          Kalyan<span className="text-black"> Pawn Brokers</span>
         </Link>
         <h1 className="text-3xl font-extrabold text-black sm:text-4xl">Privacy Policy</h1>
         <p className="mt-3 text-sm text-gray-500">Last updated: February 23, 2026</p>
@@ -23,8 +23,8 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-xl font-bold text-black">1. Overview</h2>
             <p className="mt-2">
-              This Privacy Policy explains how MyFinance collects, uses, stores, and protects
-              personal and financial information when you use the MyFinance Admin platform.
+              This Privacy Policy explains how Kalyan Pawn Brokers collects, uses, stores, and protects
+              personal and financial information when you use the Kalyan Pawn Brokers platform.
             </p>
           </section>
 
@@ -117,8 +117,8 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-xl font-bold text-black">11. Contact</h2>
             <p className="mt-2">
               For privacy-related requests or questions, contact{" "}
-              <a className="font-semibold text-[var(--primary)] hover:underline" href="mailto:privacy@myfinance.com">
-                privacy@myfinance.com
+              <a className="font-semibold text-[var(--primary)] hover:underline" href="mailto:privacy@kalyanpawnbrokers.com">
+                privacy@kalyanpawnbrokers.com
               </a>
               .
             </p>

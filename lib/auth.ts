@@ -11,7 +11,7 @@ export type AuthPayload = {
   role: UserRole;
 };
 
-export const AUTH_COOKIE_NAME = "myfinance_auth";
+export const AUTH_COOKIE_NAME = "KalyanPawnBrokers_auth";
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;

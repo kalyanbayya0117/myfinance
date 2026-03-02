@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loan } from "./loan.types";
 import { toast } from "sonner";
 import AddLoanDrawer from "./AddLoanDrawer";
@@ -28,7 +28,7 @@ export default function LoanDetailsPage({ id }: { id: string }) {
   const [closedPopupClient, setClosedPopupClient] = useState<string | null>(null);
   const [loanDrawerOpen, setLoanDrawerOpen] = useState(false);
 
-  const fetchLoanDetails = async () => {
+  const fetchLoanDetails = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`/api/loans/${id}`);
@@ -45,11 +45,11 @@ export default function LoanDetailsPage({ id }: { id: string }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchLoanDetails();
-  }, [id]);
+  }, [fetchLoanDetails]);
 
   useEffect(() => {
     if (!closedPopupClient) return;
@@ -211,7 +211,7 @@ export default function LoanDetailsPage({ id }: { id: string }) {
 
         <div className="grid gap-3 text-sm sm:grid-cols-2">
           <div className="rounded-lg border border-black/10 bg-gray-50 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Interest Rate</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Daily Interest Rate</p>
             <p className="mt-1 text-base font-bold text-black">{loan.interestRate}%</p>
           </div>
 
@@ -224,9 +224,9 @@ export default function LoanDetailsPage({ id }: { id: string }) {
 
           <div className="rounded-lg border border-black/10 bg-gray-50 p-3">
             <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-              <HiCalendar className="text-sm" /> Accrued Months
+              <HiCalendar className="text-sm" /> Accrued Days
             </p>
-            <p className="mt-1 text-base font-bold text-black">{loan.monthsElapsed ?? 0}</p>
+            <p className="mt-1 text-base font-bold text-black">{loan.daysElapsed ?? 0}</p>
           </div>
 
           <div className="rounded-lg border border-black/10 bg-gray-50 p-3">
