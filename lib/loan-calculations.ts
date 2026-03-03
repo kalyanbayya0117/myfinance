@@ -22,6 +22,17 @@ function getDaysInMonth(year: number, monthIndex: number) {
   return new Date(year, monthIndex + 1, 0).getDate();
 }
 
+function getLoanAnniversary(startDate: Date, yearsFromStart: number) {
+  const targetYear = startDate.getFullYear() + yearsFromStart;
+  const targetMonth = startDate.getMonth();
+  const targetDay = Math.min(
+    startDate.getDate(),
+    getDaysInMonth(targetYear, targetMonth),
+  );
+
+  return new Date(targetYear, targetMonth, targetDay);
+}
+
 function getAccruedInterestFromMonthlyRate({
   principal,
   monthlyInterestRate,
@@ -56,6 +67,58 @@ function getAccruedInterestFromMonthlyRate({
   return accruedInterest;
 }
 
+function getAccruedInterestWithAnnualCompounding({
+  principal,
+  monthlyInterestRate,
+  startDate,
+  asOfDate,
+}: {
+  principal: number;
+  monthlyInterestRate: number;
+  startDate: Date;
+  asOfDate: Date;
+}) {
+  if (asOfDate <= startDate || principal <= 0 || monthlyInterestRate <= 0) {
+    return {
+      accruedInterest: 0,
+      currentPrincipal: principal,
+    };
+  }
+
+  let accruedInterest = 0;
+  let currentPrincipal = principal;
+  let cycleStart = new Date(startDate);
+  let yearsElapsed = 0;
+
+  while (cycleStart < asOfDate) {
+    const nextAnniversary = getLoanAnniversary(startDate, yearsElapsed + 1);
+    const cycleEnd = nextAnniversary < asOfDate ? nextAnniversary : asOfDate;
+
+    const cycleInterest = getAccruedInterestFromMonthlyRate({
+      principal: currentPrincipal,
+      monthlyInterestRate,
+      startDate: cycleStart,
+      asOfDate: cycleEnd,
+    });
+
+    accruedInterest += cycleInterest;
+
+    if (cycleEnd.getTime() === nextAnniversary.getTime()) {
+      currentPrincipal += cycleInterest;
+      cycleStart = nextAnniversary;
+      yearsElapsed += 1;
+      continue;
+    }
+
+    break;
+  }
+
+  return {
+    accruedInterest,
+    currentPrincipal,
+  };
+}
+
 export function getLoanFinancials({
   principal,
   interestRate,
@@ -78,18 +141,24 @@ export function getLoanFinancials({
   const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const parsedStartDate = toDateOnly(startDate);
 
-  const monthlyInterestAmount = (safePrincipal * safeInterestRate) / 100;
-  const currentMonthDays = getDaysInMonth(todayDateOnly.getFullYear(), todayDateOnly.getMonth());
-  const dailyInterestAmount = currentMonthDays > 0 ? monthlyInterestAmount / currentMonthDays : 0;
-
-  const accruedInterest = parsedStartDate
-    ? getAccruedInterestFromMonthlyRate({
+  const compoundingResult = parsedStartDate
+    ? getAccruedInterestWithAnnualCompounding({
         principal: safePrincipal,
         monthlyInterestRate: safeInterestRate,
         startDate: parsedStartDate,
         asOfDate: todayDateOnly,
       })
-    : 0;
+    : {
+        accruedInterest: 0,
+        currentPrincipal: safePrincipal,
+      };
+
+  const monthlyInterestAmount =
+    (compoundingResult.currentPrincipal * safeInterestRate) / 100;
+  const currentMonthDays = getDaysInMonth(todayDateOnly.getFullYear(), todayDateOnly.getMonth());
+  const dailyInterestAmount = currentMonthDays > 0 ? monthlyInterestAmount / currentMonthDays : 0;
+
+  const accruedInterest = compoundingResult.accruedInterest;
 
   const totalAmount = safePrincipal + accruedInterest;
   const remainingAmount = Math.max(totalAmount - safeTotalPaid, 0);
