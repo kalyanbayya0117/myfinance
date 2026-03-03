@@ -34,6 +34,7 @@ function normalizeLoan<
     status?: "active" | "closed";
     interestRate?: number;
     startDate?: string;
+    endDate?: string;
   },
 >(loan: T) {
   const client = loan.clientId && typeof loan.clientId === "object" ? loan.clientId : null;
@@ -99,6 +100,7 @@ export async function GET(
         principal: normalized.principal ?? 0,
         interestRate: normalized.interestRate ?? 0,
         startDate: normalized.startDate ?? "",
+        endDate: normalized.endDate ?? "",
         totalPaid,
         storedStatus: normalized.status,
       });

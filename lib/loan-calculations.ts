@@ -123,12 +123,14 @@ export function getLoanFinancials({
   principal,
   interestRate,
   startDate,
+  endDate,
   totalPaid,
   storedStatus,
 }: {
   principal: number;
   interestRate: number;
   startDate: string;
+  endDate?: string;
   totalPaid: number;
   storedStatus?: string;
 }) {
@@ -136,17 +138,23 @@ export function getLoanFinancials({
   const safeInterestRate = Number(interestRate) || 0;
   const safeTotalPaid = Number(totalPaid) || 0;
 
-  const daysElapsed = getAccruedDays(startDate);
+  const parsedStartDate = toDateOnly(startDate);
+  const parsedEndDate = endDate ? toDateOnly(endDate) : null;
   const today = new Date();
   const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const parsedStartDate = toDateOnly(startDate);
+  const asOfDate =
+    parsedEndDate && parsedEndDate < todayDateOnly
+      ? parsedEndDate
+      : todayDateOnly;
+
+  const daysElapsed = parsedStartDate ? getAccruedDays(startDate, asOfDate) : 0;
 
   const compoundingResult = parsedStartDate
     ? getAccruedInterestWithAnnualCompounding({
         principal: safePrincipal,
         monthlyInterestRate: safeInterestRate,
         startDate: parsedStartDate,
-        asOfDate: todayDateOnly,
+        asOfDate,
       })
     : {
         accruedInterest: 0,
@@ -155,7 +163,7 @@ export function getLoanFinancials({
 
   const monthlyInterestAmount =
     (compoundingResult.currentPrincipal * safeInterestRate) / 100;
-  const currentMonthDays = getDaysInMonth(todayDateOnly.getFullYear(), todayDateOnly.getMonth());
+  const currentMonthDays = getDaysInMonth(asOfDate.getFullYear(), asOfDate.getMonth());
   const dailyInterestAmount = currentMonthDays > 0 ? monthlyInterestAmount / currentMonthDays : 0;
 
   const accruedInterest = compoundingResult.accruedInterest;

@@ -18,9 +18,31 @@ const updateLoanSchema = z.object({
   principal: z.coerce.number().positive(),
   interestRate: z.coerce.number().positive(),
   startDate: z.string().min(4),
+  endDate: z.string().optional().default(""),
   clientId: z.string().optional(),
   forceNewClient: z.boolean().optional().default(false),
   status: z.enum(["active", "closed"]).optional(),
+}).superRefine((data, context) => {
+  if (data.status === "closed") {
+    if (!data.endDate) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["endDate"],
+        message: "End date required for closed loan",
+      });
+      return;
+    }
+
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end < start) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["endDate"],
+        message: "End date cannot be before given date",
+      });
+    }
+  }
 });
 
 type ClientRef =
@@ -81,6 +103,7 @@ export async function GET(
       principal: Number(loan.principal) || 0,
       interestRate: Number(loan.interestRate) || 0,
       startDate: String(loan.startDate ?? ""),
+      endDate: String(loan.endDate ?? ""),
       totalPaid,
       storedStatus: loan.status,
     });
@@ -134,6 +157,7 @@ export async function PUT(
       principal: body?.principal,
       interestRate: body?.interestRate,
       startDate: sanitizeText(body?.startDate),
+      endDate: sanitizeText(body?.endDate),
       clientId: sanitizeText(body?.clientId),
       forceNewClient: Boolean(body?.forceNewClient),
       status: body?.status,
@@ -192,6 +216,7 @@ export async function PUT(
         principal: parsed.data.principal,
         interestRate: parsed.data.interestRate,
         startDate: parsed.data.startDate,
+        endDate: parsed.data.status === "closed" ? parsed.data.endDate : "",
         status: parsed.data.status ?? "active",
       },
       { new: true },

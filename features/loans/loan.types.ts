@@ -14,5 +14,6 @@ export type Loan = {
   remainingAmount?: number;
   interestRate: number;
   startDate: string;
+  endDate?: string;
   status: "active" | "closed";
 };

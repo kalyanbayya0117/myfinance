@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { HiX } from "react-icons/hi";
 import { Client } from "../clients/client.types";
 import { Loan } from "./loan.types";
+import { getLoanFinancials } from "@/lib/loan-calculations";
 
 interface Props {
   open: boolean;
@@ -44,11 +45,32 @@ export default function AddLoanDrawer({
 
   const clientNameField = register("clientName");
   const clientInput = watch("clientName") ?? "";
+  const loanStatus = watch("status") ?? "active";
+  const principalInput = watch("principal");
+  const interestRateInput = watch("interestRate");
+  const startDateInput = watch("startDate") ?? "";
+  const endDateInput = watch("endDate") ?? "";
   const showSuggestionPanel =
     open &&
     isClientInputFocused &&
     clientInput.trim().length > 0 &&
     (!selectedClient || clientInput.trim() !== selectedClient.name);
+
+  const closedPreview =
+    loanStatus === "closed" &&
+    startDateInput &&
+    endDateInput &&
+    Number(principalInput) > 0 &&
+    Number(interestRateInput) > 0
+      ? getLoanFinancials({
+          principal: Number(principalInput),
+          interestRate: Number(interestRateInput),
+          startDate: startDateInput,
+          endDate: endDateInput,
+          totalPaid: 0,
+          storedStatus: "closed",
+        })
+      : null;
 
   useEffect(() => {
     if (!open) return;
@@ -65,7 +87,9 @@ export default function AddLoanDrawer({
         pledgedPropertiesInput: pledgedText,
         principal: loan.principal,
         interestRate: loan.interestRate,
+        status: loan.status ?? "active",
         startDate: loan.startDate,
+        endDate: loan.endDate ?? "",
       });
 
       setSelectedClient({
@@ -84,12 +108,20 @@ export default function AddLoanDrawer({
       pledgedPropertiesInput: "",
       principal: "" as unknown as number,
       interestRate: "" as unknown as number,
+      status: "active",
       startDate: "",
+      endDate: "",
     });
     setSelectedClient(null);
     setForceNewClient(false);
     setSuggestions([]);
   }, [open, mode, loan, reset]);
+
+  useEffect(() => {
+    if (loanStatus !== "closed") {
+      setValue("endDate", "", { shouldValidate: true });
+    }
+  }, [loanStatus, setValue]);
 
   useEffect(() => {
     if (!open) return;
@@ -343,10 +375,47 @@ export default function AddLoanDrawer({
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Loan Type
+            </label>
+            <select {...register("status")} className="input">
+              <option value="active">Active Loan</option>
+              <option value="closed">Closed Loan</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Given Date
             </label>
             <input {...register("startDate")} type="date" className="input" />
           </div>
+
+          {loanStatus === "closed" ? (
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                End Date
+              </label>
+              <input {...register("endDate")} type="date" className="input" />
+              {errors.endDate?.message ? (
+                <p className="text-red-500 text-sm">{errors.endDate.message}</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {closedPreview ? (
+            <div className="rounded-lg border border-black/10 bg-gray-50 p-3 text-sm">
+              <p className="font-semibold text-gray-800">Closed Loan Calculation</p>
+              <p className="mt-1 text-gray-600">
+                Days: <span className="font-semibold text-black">{closedPreview.daysElapsed ?? 0}</span>
+              </p>
+              <p className="text-gray-600">
+                Interest: <span className="font-semibold text-black">₹{(closedPreview.accruedInterest ?? 0).toLocaleString()}</span>
+              </p>
+              <p className="text-gray-600">
+                Total Due: <span className="font-semibold text-black">₹{(closedPreview.totalAmount ?? 0).toLocaleString()}</span>
+              </p>
+            </div>
+          ) : null}
 
           <div className="sticky bottom-0 bg-white pt-2">
             <div className="flex gap-3">

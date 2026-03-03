@@ -19,9 +19,32 @@ const loanSchema = z.object({
   pledgedProperties: z.array(z.string().min(1)).optional().default([]),
   principal: z.coerce.number().positive(),
   interestRate: z.coerce.number().positive(),
+  status: z.enum(["active", "closed"]).default("active"),
   startDate: z.string().min(4),
+  endDate: z.string().optional().default(""),
   clientId: z.string().optional(),
   forceNewClient: z.boolean().optional().default(false),
+}).superRefine((data, context) => {
+  if (data.status === "closed") {
+    if (!data.endDate) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["endDate"],
+        message: "End date required for closed loan",
+      });
+      return;
+    }
+
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end < start) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["endDate"],
+        message: "End date cannot be before given date",
+      });
+    }
+  }
 });
 
 export async function GET(req: Request) {
@@ -74,7 +97,9 @@ export async function POST(req: Request) {
         : [],
       principal: body?.principal,
       interestRate: body?.interestRate,
+      status: body?.status,
       startDate: sanitizeText(body?.startDate),
+      endDate: sanitizeText(body?.endDate),
       clientId: sanitizeText(body?.clientId),
       forceNewClient: Boolean(body?.forceNewClient),
     });
@@ -125,7 +150,8 @@ export async function POST(req: Request) {
       principal: parsed.data.principal,
       interestRate: parsed.data.interestRate,
       startDate: parsed.data.startDate,
-      status: "active",
+      endDate: parsed.data.status === "closed" ? parsed.data.endDate : "",
+      status: parsed.data.status,
     });
 
     return noStoreJson(loan, { status: 201 });

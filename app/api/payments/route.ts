@@ -68,6 +68,7 @@ export async function POST(req: Request) {
       principal: Number(loan.principal) || 0,
       interestRate: Number(loan.interestRate) || 0,
       startDate: String(loan.startDate ?? ""),
+      endDate: String(loan.endDate ?? ""),
       totalPaid: paidBefore,
       storedStatus: loan.status,
     });
@@ -87,6 +88,7 @@ export async function POST(req: Request) {
       principal: Number(loan.principal) || 0,
       interestRate: Number(loan.interestRate) || 0,
       startDate: String(loan.startDate ?? ""),
+      endDate: String(loan.endDate ?? ""),
       totalPaid,
       storedStatus: loan.status,
     });

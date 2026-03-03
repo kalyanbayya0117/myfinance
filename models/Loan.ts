@@ -12,6 +12,7 @@ interface LoanDocument {
   principal: number;
   interestRate: number;
   startDate: string;
+  endDate?: string;
   status: LoanStatus;
 }
 
@@ -35,6 +36,7 @@ const LoanSchema = new Schema<LoanDocument>(
     principal: { type: Number, required: true },
     interestRate: { type: Number, required: true },
     startDate: { type: String, required: true },
+    endDate: { type: String, default: "" },
     status: {
       type: String,
       enum: ["active", "closed"],
@@ -70,6 +72,12 @@ if (existingLoanModel) {
   if (!existingLoanModel.schema.path("loanId")) {
     existingLoanModel.schema.add({
       loanId: { type: String, required: true, trim: true },
+    });
+  }
+
+  if (!existingLoanModel.schema.path("endDate")) {
+    existingLoanModel.schema.add({
+      endDate: { type: String, default: "" },
     });
   }
 
