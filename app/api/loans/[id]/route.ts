@@ -184,7 +184,14 @@ export async function PUT(
         throw new ApiError("Invalid client selected", 400);
       }
 
-      clientDoc = await Client.findOne({ _id: parsed.data.clientId, userId: auth.userId });
+      clientDoc = await Client.findOneAndUpdate(
+        { _id: parsed.data.clientId, userId: auth.userId },
+        {
+          name: parsed.data.clientName,
+          phone: parsed.data.phone,
+        },
+        { new: true },
+      );
       if (!clientDoc) {
         throw new ApiError("Selected client not found", 404);
       }

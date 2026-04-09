@@ -1,5 +1,6 @@
 import Link from "next/link";
 import StatCard from "@/components/ui/StatCard";
+import ProtectedStatCard from "@/components/ui/ProtectedStatCard";
 import { getAuthFromServerCookie } from "@/lib/auth";
 import { getLoansForUser } from "@/lib/server-data";
 import { redirect } from "next/navigation";
@@ -20,7 +21,9 @@ export default async function Page() {
 
   const loans = await getLoansForUser({ userId: auth.userId });
 
-  const totalLent = loans.reduce((sum, loan) => sum + (Number(loan.principal) || 0), 0);
+  const totalActiveLent = loans
+    .filter((loan) => loan.status === "active")
+    .reduce((sum, loan) => sum + (Number(loan.principal) || 0), 0);
   const activeLoans = loans.filter((loan) => loan.status === "active").length;
   const closedLoans = loans.filter((loan) => loan.status === "closed").length;
   const totalCollected = loans.reduce((sum, loan) => sum + (Number(loan.totalPaid) || 0), 0);
@@ -36,7 +39,7 @@ export default async function Page() {
       <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard label="Total Lent" value={formatCurrency(totalLent)} />
+        <ProtectedStatCard label="Total Active Lent" value={formatCurrency(totalActiveLent)} />
         <StatCard label="Total Collected" value={formatCurrency(totalCollected)} />
         <StatCard
           label="Total Interest Collected"

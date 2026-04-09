@@ -167,6 +167,11 @@ export async function PUT(
       throw new ApiError("Client not found", 404);
     }
 
+    await Loan.updateMany(
+      { clientId: id, userId: auth.userId },
+      { clientName: parsed.data.name, phone: parsed.data.phone },
+    );
+
     return noStoreJson(client);
   } catch (error) {
     return handleApiError(error, "client:update");

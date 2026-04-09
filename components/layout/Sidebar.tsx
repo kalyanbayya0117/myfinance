@@ -7,7 +7,7 @@ import {
   HiOutlineDocumentText,
   HiOutlineUsers,
   // HiOutlineCash,
-  // HiOutlineChartBar,
+  HiOutlineChartBar,
   HiOutlineCog,
 } from "react-icons/hi";
 
@@ -15,8 +15,8 @@ const links = [
   { name: "Dashboard", href: "/", icon: HiOutlineHome },
   { name: "Loans", href: "/loans", icon: HiOutlineDocumentText },
   { name: "Clients", href: "/clients", icon: HiOutlineUsers },
+  { name: "Analytics", href: "/analytics", icon: HiOutlineChartBar },
   // { name: "Payments", href: "/payments", icon: HiOutlineCash },
-  // { name: "Reports", href: "/reports", icon: HiOutlineChartBar },
   { name: "Settings", href: "/settings", icon: HiOutlineCog },
 ];
 
@@ -77,7 +77,7 @@ const Sidebar = ({ onClose }: Props) => {
       </aside>
 
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-black/10 bg-white px-2 py-1">
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {links.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href;
