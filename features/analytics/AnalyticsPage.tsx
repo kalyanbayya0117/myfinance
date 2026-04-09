@@ -9,7 +9,11 @@ import {
   HiCollection,
   HiCalendar,
   HiRefresh,
+  HiLockClosed,
+  HiEye,
+  HiEyeOff,
 } from "react-icons/hi";
+import { toast } from "sonner";
 
 type Metrics = {
   totalLent: number;
@@ -76,6 +80,10 @@ function formatCurrency(value: number) {
 }
 
 export default function AnalyticsPage() {
+  const [unlocked, setUnlocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<MetricKey>("totalLent");
   const [period, setPeriod] = useState("lifetime");
   const [customMode, setCustomMode] = useState<"exact" | "range">("range");
@@ -87,6 +95,27 @@ export default function AnalyticsPage() {
   const [interestDetails, setInterestDetails] = useState<LoanDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
+
+  const handleUnlock = async () => {
+    if (!password.trim()) return;
+    setVerifying(true);
+    try {
+      const res = await fetch("/api/auth/verify-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data?.message || "Incorrect password");
+        return;
+      }
+      setUnlocked(true);
+      setPassword("");
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -126,10 +155,10 @@ export default function AnalyticsPage() {
   }, [period, customMode, exactDate, fromDate, toDate]);
 
   useEffect(() => {
-    if (period !== "custom") {
+    if (unlocked && period !== "custom") {
       fetchAnalytics();
     }
-  }, [period, fetchAnalytics]);
+  }, [unlocked, period, fetchAnalytics]);
 
   const handleApplyCustom = () => {
     if (customMode === "exact" && !exactDate) return;
@@ -144,6 +173,55 @@ export default function AnalyticsPage() {
 
   const activePeriodLabel =
     periodOptions.find((p) => p.value === period)?.fullLabel ?? "";
+
+  if (!unlocked) {
+    return (
+      <section className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-full max-w-sm text-center space-y-6">
+          <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100">
+            <HiLockClosed className="text-3xl text-gray-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Analytics Locked</h2>
+            <p className="text-sm text-gray-500 mt-1">Enter your password to view analytics data.</p>
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleUnlock();
+            }}
+            className="space-y-3"
+          >
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                autoFocus
+                className="input w-full pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 cursor-pointer"
+                tabIndex={-1}
+              >
+                {showPassword ? <HiEyeOff className="text-lg" /> : <HiEye className="text-lg" />}
+              </button>
+            </div>
+            <button
+              type="submit"
+              disabled={verifying || !password.trim()}
+              className="w-full bg-[var(--primary)] text-white py-2.5 rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {verifying ? "Verifying…" : "Unlock"}
+            </button>
+          </form>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-5">

@@ -14,6 +14,7 @@ export default function ProtectedStatCard({ label, value }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleEyeClick = () => {
     if (revealed) {
@@ -95,18 +96,28 @@ export default function ProtectedStatCard({ label, value }: Props) {
               Enter your account password to view the amount.
             </p>
 
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleVerify();
-              }}
-              placeholder="Password"
-              className="input w-full"
-              autoFocus
-              disabled={verifying}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleVerify();
+                }}
+                placeholder="Password"
+                className="input w-full pr-10"
+                autoFocus
+                disabled={verifying}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 cursor-pointer"
+                tabIndex={-1}
+              >
+                {showPassword ? <HiEyeOff className="text-lg" /> : <HiEye className="text-lg" />}
+              </button>
+            </div>
 
             <div className="flex gap-3 mt-4">
               <button
