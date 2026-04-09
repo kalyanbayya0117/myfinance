@@ -222,6 +222,15 @@ export default function LoanDetailsPage({ id }: { id: string }) {
             <p className="mt-1 text-base font-bold text-black">{loan.startDate}</p>
           </div>
 
+          {isLoanClosed && loan.endDate ? (
+            <div className="rounded-lg border border-black/10 bg-gray-50 p-3">
+              <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                <HiCalendar className="text-sm" /> End Date
+              </p>
+              <p className="mt-1 text-base font-bold text-black">{loan.endDate}</p>
+            </div>
+          ) : null}
+
           <div className="rounded-lg border border-black/10 bg-gray-50 p-3">
             <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
               <HiCalendar className="text-sm" /> Accrued Days

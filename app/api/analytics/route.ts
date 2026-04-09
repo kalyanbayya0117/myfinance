@@ -81,18 +81,23 @@ export async function GET(req: Request) {
 
     const userId = new mongoose.Types.ObjectId(auth.userId);
 
-    // Convert to YYYY-MM-DD strings for loan startDate comparison (stored as string)
-    const startStr = range.start.toISOString().slice(0, 10);
-    const endStr = range.end.toISOString().slice(0, 10);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const toDateStr = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-    // Loans whose startDate falls within the time range
-    const loans = await Loan.find(
+    const periodStart = toDateStr(range.start);
+    const periodEnd = toDateStr(range.end);
+
+    // ── 1. Loans ISSUED in the period (for Total Lent, counts) ──
+    const issuedLoans = await Loan.find(
       {
         userId: auth.userId,
-        startDate: { $gte: startStr, $lte: endStr },
+        startDate: { $gte: periodStart, $lte: periodEnd },
       },
       {
         _id: 1,
+        loanId: 1,
+        clientName: 1,
         principal: 1,
         interestRate: 1,
         startDate: 1,
@@ -101,56 +106,32 @@ export async function GET(req: Request) {
       },
     ).lean();
 
-    const loanIds = loans.map((l) => l._id).filter(Boolean);
+    const issuedLoanIds = issuedLoans.map((l) => l._id).filter(Boolean);
 
-    // Payments made within the time range (across ALL loans, not just ones created in range)
-    const paymentAgg = await Payment.aggregate([
-      {
-        $match: {
-          userId,
-          date: { $gte: range.start, $lte: range.end },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalCollected: { $sum: "$amount" },
-        },
-      },
-    ]);
-
-    // Payments for loans created in this range
-    const loanPaymentAgg = loanIds.length
+    const issuedPaymentAgg = issuedLoanIds.length
       ? await Payment.aggregate([
-          {
-            $match: {
-              userId,
-              loanId: { $in: loanIds },
-            },
-          },
-          {
-            $group: {
-              _id: "$loanId",
-              totalPaid: { $sum: "$amount" },
-            },
-          },
+          { $match: { userId, loanId: { $in: issuedLoanIds } } },
+          { $group: { _id: "$loanId", totalPaid: { $sum: "$amount" } } },
         ])
       : [];
 
-    const paidByLoanId = new Map<string, number>(
-      loanPaymentAgg.map((row) => [String(row._id), Number(row.totalPaid) || 0]),
+    const issuedPaidMap = new Map<string, number>(
+      issuedPaymentAgg.map((r) => [String(r._id), Number(r.totalPaid) || 0]),
     );
 
-    const totalLent = loans.reduce((s, l) => s + (Number(l.principal) || 0), 0);
-    const totalActiveLent = loans
-      .filter((l) => l.status === "active")
-      .reduce((s, l) => s + (Number(l.principal) || 0), 0);
+    const issuedDetails: {
+      _id: string;
+      loanId: string;
+      clientName: string;
+      principal: number;
+      interestGenerated: number;
+      totalPaid: number;
+      status: string;
+      startDate: string;
+    }[] = [];
 
-    const totalCollected = paymentAgg[0]?.totalCollected ?? 0;
-
-    let totalInterestGenerated = 0;
-    for (const loan of loans) {
-      const totalPaid = paidByLoanId.get(String(loan._id)) ?? 0;
+    for (const loan of issuedLoans) {
+      const totalPaid = issuedPaidMap.get(String(loan._id)) ?? 0;
       const financials = getLoanFinancials({
         principal: Number(loan.principal) || 0,
         interestRate: Number(loan.interestRate) || 0,
@@ -159,12 +140,121 @@ export async function GET(req: Request) {
         totalPaid,
         storedStatus: loan.status,
       });
-      totalInterestGenerated += financials.accruedInterest ?? 0;
+
+      issuedDetails.push({
+        _id: String(loan._id),
+        loanId: String((loan as unknown as Record<string, unknown>).loanId ?? ""),
+        clientName: String((loan as unknown as Record<string, unknown>).clientName ?? ""),
+        principal: Number(loan.principal) || 0,
+        interestGenerated: financials.accruedInterest ?? 0,
+        totalPaid,
+        status: financials.status,
+        startDate: String(loan.startDate ?? ""),
+      });
     }
 
-    const activeLoans = loans.filter((l) => l.status === "active").length;
-    const closedLoans = loans.filter((l) => l.status === "closed").length;
-    const totalLoans = loans.length;
+    const totalLent = issuedLoans.reduce((s, l) => s + (Number(l.principal) || 0), 0);
+    const totalActiveLent = issuedDetails
+      .filter((l) => l.status === "active")
+      .reduce((s, l) => s + l.principal, 0);
+    const activeLoans = issuedDetails.filter((l) => l.status === "active").length;
+    const closedLoans = issuedDetails.filter((l) => l.status === "closed").length;
+    const totalLoans = issuedDetails.length;
+
+    // ── 2. Total Collected = ALL payments made during the period ──
+    const collectedAgg = await Payment.aggregate([
+      {
+        $match: {
+          userId,
+          date: { $gte: range.start, $lte: range.end },
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const totalCollected = collectedAgg[0]?.total ?? 0;
+
+    // ── 3. Total Interest Generated = interest accrued by ALL loans DURING the period ──
+    // Fetch all loans that were active at any point during the period
+    // i.e. startDate <= periodEnd (loan existed) and not closed before periodStart
+    const allLoans = await Loan.find(
+      {
+        userId: auth.userId,
+        startDate: { $lte: periodEnd },
+      },
+      {
+        _id: 1,
+        loanId: 1,
+        clientName: 1,
+        principal: 1,
+        interestRate: 1,
+        startDate: 1,
+        endDate: 1,
+        status: 1,
+      },
+    ).lean();
+
+    let totalInterestGenerated = 0;
+    const interestDetails: {
+      _id: string;
+      loanId: string;
+      clientName: string;
+      principal: number;
+      interestGenerated: number;
+      totalPaid: number;
+      status: string;
+      startDate: string;
+    }[] = [];
+
+    for (const loan of allLoans) {
+      const loanStart = String(loan.startDate ?? "");
+      const loanEnd = String(loan.endDate ?? "");
+
+      // Skip loans that closed before the period started
+      if (loanEnd && loan.status === "closed" && loanEnd < periodStart) continue;
+
+      // Interest up to period end
+      const capEnd = loanEnd && loanEnd < periodEnd ? loanEnd : periodEnd;
+      const interestToEnd = getLoanFinancials({
+        principal: Number(loan.principal) || 0,
+        interestRate: Number(loan.interestRate) || 0,
+        startDate: loanStart,
+        endDate: capEnd,
+        totalPaid: 0,
+        storedStatus: loan.status,
+      }).accruedInterest ?? 0;
+
+      // Interest up to period start (to subtract)
+      const capStart = loanEnd && loanEnd < periodStart ? loanEnd : periodStart;
+      const interestToStart = loanStart < periodStart
+        ? (getLoanFinancials({
+            principal: Number(loan.principal) || 0,
+            interestRate: Number(loan.interestRate) || 0,
+            startDate: loanStart,
+            endDate: capStart,
+            totalPaid: 0,
+            storedStatus: loan.status,
+          }).accruedInterest ?? 0)
+        : 0;
+
+      const periodInterest = Math.max(interestToEnd - interestToStart, 0);
+      if (periodInterest <= 0) continue;
+
+      totalInterestGenerated += periodInterest;
+
+      interestDetails.push({
+        _id: String(loan._id),
+        loanId: String((loan as unknown as Record<string, unknown>).loanId ?? ""),
+        clientName: String((loan as unknown as Record<string, unknown>).clientName ?? ""),
+        principal: Number(loan.principal) || 0,
+        interestGenerated: periodInterest,
+        totalPaid: 0,
+        status: String(loan.status ?? "active"),
+        startDate: loanStart,
+      });
+    }
+
+    // Sort interest details by amount descending
+    interestDetails.sort((a, b) => b.interestGenerated - a.interestGenerated);
 
     return noStoreJson({
       period,
@@ -179,6 +269,8 @@ export async function GET(req: Request) {
         closedLoans,
         totalLoans,
       },
+      loanDetails: issuedDetails,
+      interestDetails,
     });
   } catch (error) {
     return handleApiError(error, "analytics:get");

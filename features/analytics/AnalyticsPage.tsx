@@ -21,7 +21,24 @@ type Metrics = {
   totalLoans: number;
 };
 
+type LoanDetail = {
+  _id: string;
+  loanId: string;
+  clientName: string;
+  principal: number;
+  interestGenerated: number;
+  totalPaid: number;
+  status: string;
+  startDate: string;
+};
+
 type MetricKey = keyof Metrics;
+
+type DetailAccessor = {
+  valueKey: keyof LoanDetail;
+  label: string;
+  filterFn?: (l: LoanDetail) => boolean;
+};
 
 const metricOptions: {
   key: MetricKey;
@@ -30,14 +47,15 @@ const metricOptions: {
   isCurrency: boolean;
   color: string;
   bgColor: string;
+  detail?: DetailAccessor;
 }[] = [
-  { key: "totalLent", label: "Total Lent", icon: HiCash, isCurrency: true, color: "text-blue-600", bgColor: "bg-blue-50 border-blue-200" },
-  { key: "totalActiveLent", label: "Total Active Lent", icon: HiCash, isCurrency: true, color: "text-emerald-600", bgColor: "bg-emerald-50 border-emerald-200" },
+  { key: "totalLent", label: "Total Lent", icon: HiCash, isCurrency: true, color: "text-blue-600", bgColor: "bg-blue-50 border-blue-200", detail: { valueKey: "principal", label: "Lent" } },
+  { key: "totalActiveLent", label: "Total Active Lent", icon: HiCash, isCurrency: true, color: "text-emerald-600", bgColor: "bg-emerald-50 border-emerald-200", detail: { valueKey: "principal", label: "Lent", filterFn: (l) => l.status === "active" } },
   { key: "totalCollected", label: "Total Collected", icon: HiCash, isCurrency: true, color: "text-purple-600", bgColor: "bg-purple-50 border-purple-200" },
-  { key: "totalInterestGenerated", label: "Total Interest Generated", icon: HiTrendingUp, isCurrency: true, color: "text-amber-600", bgColor: "bg-amber-50 border-amber-200" },
-  { key: "activeLoans", label: "Active Loans", icon: HiClock, isCurrency: false, color: "text-cyan-600", bgColor: "bg-cyan-50 border-cyan-200" },
-  { key: "closedLoans", label: "Closed Loans", icon: HiCheckCircle, isCurrency: false, color: "text-green-600", bgColor: "bg-green-50 border-green-200" },
-  { key: "totalLoans", label: "Total Loans", icon: HiCollection, isCurrency: false, color: "text-indigo-600", bgColor: "bg-indigo-50 border-indigo-200" },
+  { key: "totalInterestGenerated", label: "Total Interest Generated", icon: HiTrendingUp, isCurrency: true, color: "text-amber-600", bgColor: "bg-amber-50 border-amber-200", detail: { valueKey: "interestGenerated", label: "Interest Generated" } },
+  { key: "activeLoans", label: "Active Loans", icon: HiClock, isCurrency: false, color: "text-cyan-600", bgColor: "bg-cyan-50 border-cyan-200", detail: { valueKey: "principal", label: "Principal", filterFn: (l) => l.status === "active" } },
+  { key: "closedLoans", label: "Closed Loans", icon: HiCheckCircle, isCurrency: false, color: "text-green-600", bgColor: "bg-green-50 border-green-200", detail: { valueKey: "principal", label: "Principal", filterFn: (l) => l.status === "closed" } },
+  { key: "totalLoans", label: "Total Loans", icon: HiCollection, isCurrency: false, color: "text-indigo-600", bgColor: "bg-indigo-50 border-indigo-200", detail: { valueKey: "principal", label: "Principal" } },
 ];
 
 const periodOptions = [
@@ -65,6 +83,8 @@ export default function AnalyticsPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [loanDetails, setLoanDetails] = useState<LoanDetail[]>([]);
+  const [interestDetails, setInterestDetails] = useState<LoanDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
 
@@ -89,12 +109,16 @@ export default function AnalyticsPage() {
       const res = await fetch(`/api/analytics?${params.toString()}`);
       if (!res.ok) {
         setMetrics(null);
+        setLoanDetails([]);
+        setInterestDetails([]);
         setDateRange(null);
         return;
       }
 
       const data = await res.json();
       setMetrics(data.metrics);
+      setLoanDetails(data.loanDetails ?? []);
+      setInterestDetails(data.interestDetails ?? []);
       setDateRange({ from: data.from, to: data.to });
     } finally {
       setLoading(false);
@@ -307,34 +331,145 @@ export default function AnalyticsPage() {
             })}
           </div>
 
-          {/* Highlighted detail card */}
+          {/* Highlighted detail card + loan breakdown */}
           {(() => {
             const opt = metricOptions.find((m) => m.key === selectedMetric)!;
             const val = metrics[opt.key] ?? 0;
             const display = opt.isCurrency ? formatCurrency(val) : val.toLocaleString();
             const Icon = opt.icon;
+            const detail = opt.detail;
+
+            // Use interestDetails for interest metric, loanDetails for everything else
+            const sourceData = selectedMetric === "totalInterestGenerated"
+              ? interestDetails
+              : loanDetails;
+
+            const filteredLoans = detail?.filterFn
+              ? sourceData.filter(detail.filterFn)
+              : sourceData;
+
+            const sortedLoans = [...filteredLoans].sort((a, b) => {
+              const aVal = Number(a[detail?.valueKey ?? "principal"]) || 0;
+              const bVal = Number(b[detail?.valueKey ?? "principal"]) || 0;
+              return bVal - aVal;
+            });
 
             return (
-              <div className={`rounded-xl border ${opt.bgColor} p-6 shadow-sm`}>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icon className={`text-xl ${opt.color}`} />
-                      <p className={`text-sm font-bold ${opt.color}`}>{opt.label}</p>
+              <>
+                <div className={`rounded-xl border ${opt.bgColor} p-6 shadow-sm`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon className={`text-xl ${opt.color}`} />
+                        <p className={`text-sm font-bold ${opt.color}`}>{opt.label}</p>
+                      </div>
+                      <p className="text-4xl font-extrabold text-black mt-2">{display}</p>
+                      {dateRange && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          {activePeriodLabel} &middot; {formatDateLabel(dateRange.from)} — {formatDateLabel(dateRange.to)}
+                        </p>
+                      )}
                     </div>
-                    <p className="text-4xl font-extrabold text-black mt-2">{display}</p>
-                    {dateRange && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        {activePeriodLabel} &middot; {formatDateLabel(dateRange.from)} — {formatDateLabel(dateRange.to)}
-                      </p>
-                    )}
-                  </div>
 
-                  <div className={`h-14 w-14 rounded-2xl ${opt.bgColor} inline-flex items-center justify-center shrink-0`}>
-                    <Icon className={`text-3xl ${opt.color} opacity-60`} />
+                    <div className={`h-14 w-14 rounded-2xl ${opt.bgColor} inline-flex items-center justify-center shrink-0`}>
+                      <Icon className={`text-3xl ${opt.color} opacity-60`} />
+                    </div>
                   </div>
                 </div>
-              </div>
+
+                {/* Loan-wise breakdown */}
+                {detail && (
+                  <div className="bg-white rounded-xl border border-black/10 shadow-sm overflow-hidden">
+                    <div className="px-5 py-4 border-b border-black/10 flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-sm">Loan-wise Breakdown</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">{opt.label} — per loan details</p>
+                      </div>
+                      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">
+                        {sortedLoans.length} loans
+                      </span>
+                    </div>
+
+                    {sortedLoans.length === 0 ? (
+                      <div className="p-6 text-center text-sm text-gray-400">
+                        No loans found for this metric.
+                      </div>
+                    ) : (
+                      <>
+                        {/* Mobile cards */}
+                        <div className="md:hidden divide-y divide-black/10">
+                          {sortedLoans.map((loan) => {
+                            const amount = Number(loan[detail.valueKey]) || 0;
+                            return (
+                              <div key={loan._id} className="p-4 space-y-2">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="font-semibold text-sm truncate">{loan.clientName || "Unknown"}</p>
+                                    <p className="text-xs text-gray-500">{loan.loanId || "-"}</p>
+                                  </div>
+                                  <p className={`text-sm font-bold whitespace-nowrap ${opt.color}`}>
+                                    {opt.isCurrency ? formatCurrency(amount) : amount.toLocaleString()}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500">
+                                  <span>Principal: {formatCurrency(loan.principal)}</span>
+                                  <span>•</span>
+                                  <span className={`capitalize font-semibold ${loan.status === "active" ? "text-emerald-600" : "text-blue-600"}`}>
+                                    {loan.status}
+                                  </span>
+                                  <span>•</span>
+                                  <span>{loan.startDate}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Desktop table */}
+                        <div className="hidden md:block overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                              <tr>
+                                <th className="px-5 py-3 text-left font-semibold">Client</th>
+                                <th className="px-5 py-3 text-left font-semibold">Loan ID</th>
+                                <th className="px-5 py-3 text-left font-semibold">Principal</th>
+                                <th className="px-5 py-3 text-left font-semibold">{detail.label}</th>
+                                <th className="px-5 py-3 text-left font-semibold">Given Date</th>
+                                <th className="px-5 py-3 text-left font-semibold">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sortedLoans.map((loan) => {
+                                const amount = Number(loan[detail.valueKey]) || 0;
+                                return (
+                                  <tr key={loan._id} className="border-t border-black/5 hover:bg-gray-50 transition">
+                                    <td className="px-5 py-3 font-semibold">{loan.clientName || "Unknown"}</td>
+                                    <td className="px-5 py-3 text-gray-600">{loan.loanId || "-"}</td>
+                                    <td className="px-5 py-3">{formatCurrency(loan.principal)}</td>
+                                    <td className={`px-5 py-3 font-bold ${opt.color}`}>
+                                      {opt.isCurrency ? formatCurrency(amount) : amount.toLocaleString()}
+                                    </td>
+                                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{loan.startDate}</td>
+                                    <td className="px-5 py-3">
+                                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+                                        loan.status === "active"
+                                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                          : "bg-blue-50 text-blue-700 border border-blue-200"
+                                      }`}>
+                                        {loan.status}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </>
             );
           })()}
         </>

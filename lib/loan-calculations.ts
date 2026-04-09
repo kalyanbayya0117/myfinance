@@ -139,9 +139,13 @@ export function getLoanFinancials({
   const safeTotalPaid = Number(totalPaid) || 0;
 
   const parsedStartDate = toDateOnly(startDate);
-  const parsedEndDate = endDate ? toDateOnly(endDate) : null;
+  const parsedEndDateRaw = endDate ? toDateOnly(endDate) : null;
+  // Make endDate inclusive: push to start of next day so the end day is counted
+  const parsedEndDate = parsedEndDateRaw
+    ? new Date(parsedEndDateRaw.getFullYear(), parsedEndDateRaw.getMonth(), parsedEndDateRaw.getDate() + 1)
+    : null;
   const today = new Date();
-  const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
   const asOfDate =
     parsedEndDate && parsedEndDate < todayDateOnly
       ? parsedEndDate
